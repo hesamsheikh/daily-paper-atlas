@@ -504,16 +504,25 @@ canvas#sigma_bg_1 {
 }
 
 #attributepane .text .returntext {
-  color: #007AFF;
+  color: #ffffff;
   cursor: pointer;
-  margin: 10px 0;
-  padding: 10px 10px 5px 10px;
+  margin: 10px 0 20px 0;
+  padding: 12px;
   font-weight: bold;
-  border-bottom: 1px solid #ddd;
+  font-size: 14px;
+  text-align: center;
+  background-color: #007AFF;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+#attributepane .text .returntext:hover {
+  background-color: #0056b3;
 }
 
 #attributepane .text .nodeattributes .nodetype {
-  font-style: italic;
-  color: #666;
-  margin-bottom: 8px;
+  color: #333;
+  margin-bottom: 12px;
+  font-size: 13px;
+  display: block;
 } 

@@ -171,6 +171,11 @@ function initializeGraph(data) {
         color: nodeColor,
         type: node.type
       });
+      
+      // Debug output for a few nodes to verify type is set
+      if (i < 3) {
+        console.log("Added node:", node.id, "with type:", node.type);
+      }
     }
     
     // Add edges to the graph
@@ -480,8 +485,40 @@ function nodeActive(nodeId) {
     // Set the node name/title
     $('.nodeattributes .name').text(selected.label || selected.id);
     
-    // Display the node type
-    $('.nodeattributes .nodetype').text(selected.type ? 'Type: ' + selected.type : '');
+    // Debug the node object to see what fields are available
+    console.log("Selected node:", selected);
+    console.log("Node properties:");
+    for (let prop in selected) {
+      console.log(`- ${prop}: ${selected[prop]}`);
+    }
+    
+    // Display the node type by parsing the ID
+    let nodeType = null;
+    
+    // Try to parse the node type from the ID (format: type_number)
+    if (selected.id && selected.id.includes('_')) {
+      const idParts = selected.id.split('_');
+      if (idParts.length >= 2) {
+        nodeType = idParts[0];
+        console.log("Extracted type from ID:", nodeType);
+      }
+    } 
+    // Fallbacks if we couldn't get the type from ID
+    else if (selected.type) {
+      nodeType = selected.type;
+      console.log("Node has type directly:", selected.type);
+    } else if (selected.attr && selected.attr.type) {
+      nodeType = selected.attr.type;
+      console.log("Node has type in attr:", selected.attr.type);
+    }
+    
+    // Format the type nicely - capitalize first letter
+    if (nodeType) {
+      nodeType = nodeType.charAt(0).toUpperCase() + nodeType.slice(1);
+      $('.nodeattributes .nodetype').text('Type: ' + nodeType).show();
+    } else {
+      $('.nodeattributes .nodetype').hide();
+    }
     
     // Simplify data display to only show degree
     let dataHTML = '';
