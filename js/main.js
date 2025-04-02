@@ -4,7 +4,6 @@ let graph;
 let filter;
 let config = {};
 let greyColor = '#ccc';
-let activeState = { activeNodes: [], activeEdges: [] };
 let selectedNode = null;
 let colorAttributes = [];
 let colors = [
@@ -20,14 +19,7 @@ let nodeTypes = {
 
 // Initialize when document is ready
 $(document).ready(function() {
-  console.log("Document ready, checking Sigma.js availability");
-  
-  if (typeof sigma === 'undefined') {
-    console.error("Sigma.js is not loaded!");
-    return;
-  }
-  
-  console.log("Sigma.js version:", sigma.version);
+  console.log("Document ready, initializing Daily Paper Atlas");
   
   // Initialize attribute pane
   $('#attributepane').css('display', 'none');
@@ -87,21 +79,14 @@ $(document).ready(function() {
     nodeNormal();
   });
 
-  // Set up color selector
-  $('#color-attribute').change(function() {
-    let attr = $(this).val();
-    colorNodesByAttribute(attr);
-  });
-  
   // Set up filter selector
   $('#filter-select').change(function() {
     let filterValue = $(this).val();
     filterByNodeType(filterValue);
   });
 
-  // Call updateLegend immediately to ensure it runs
+  // Call updateLegend to ensure it runs
   setTimeout(function() {
-    console.log("Forcing legend update from document ready");
     updateLegend();
   }, 500);
 });
@@ -227,8 +212,13 @@ function initializeGraph(data) {
     
     console.log("Graph data loaded into sigma instance");
     
+    // Initialize filters
+    initFilters();
+    
+    // Update the legend
+    updateLegend();
+    
     // Bind events
-    console.log("Binding events...");
     bindEvents();
     
     console.log("Graph initialization complete");
@@ -294,119 +284,34 @@ function filterByNodeType(filterValue) {
   }
 }
 
-// Bind events
+// Bind events based on the Model-Atlas implementation
 function bindEvents() {
   if (!sigmaInstance) {
     console.error("Sigma instance not found when binding events");
     return;
   }
   
-  console.log("Starting to bind sigma events...");
+  console.log("Binding events to sigma instance");
   
-  try {
-    // When a node is clicked, display its details
-    sigmaInstance.bind('clickNode', function(e) {
-      console.log("Node clicked!", e);
-      if (!e || !e.data || !e.data.node) {
-        console.error("Click event missing node data");
-        return;
-      }
-      
-      var node = e.data.node;
-      console.log("Clicked node:", node);
-      
-      if (e.data.captor.isDragging) {
-        console.log("Ignoring click while dragging");
-        return;
-      }
-      
-      nodeActive(node.id);
-    });
-    
-    // When stage is clicked, close the attribute pane
-    sigmaInstance.bind('clickStage', function(e) {
-      console.log("Stage clicked!", e);
-      if (!e.data.node) {
-        nodeNormal();
-      }
-    });
-    
-    // Add direct DOM click handler as backup
-    document.getElementById('sigma-canvas').addEventListener('click', function(e) {
-      console.log("Direct canvas click detected", e);
-    });
-    
-    // Highlight connected nodes on hover
-    sigmaInstance.bind('overNode', function(e) {
-      // --- Completely disable hover effects when a node is selected --- 
-      if (sigmaInstance.detail) {
-        return; 
-      }
-      
-      var node = e.data.node;
-      var nodeId = node.id;
-      console.log("Node hover enter:", nodeId);
-      
-      var neighbors = {};
-      sigmaInstance.iterEdges(function(edge) {
-        if (edge.source == nodeId || edge.target == nodeId) {
-          neighbors[edge.source == nodeId ? edge.target : edge.source] = true;
-        }
-      });
-      
-      sigmaInstance.iterNodes(function(n) {
-        // Store original color only if not already stored
-        if (n.originalColor === undefined) n.originalColor = n.color;
-        if (n.id != nodeId && !neighbors[n.id]) {
-          n.color = greyColor;
-        }
-      });
-      
-      sigmaInstance.iterEdges(function(edge) {
-        // Store original color only if not already stored
-        if (edge.originalColor === undefined) edge.originalColor = edge.color;
-        if (edge.source != nodeId && edge.target != nodeId) {
-          edge.color = greyColor;
-        }
-      });
-      
-      sigmaInstance.refresh();
-    });
-    
-    sigmaInstance.bind('outNode', function(e) {
-      // --- Completely disable hover effects when a node is selected --- 
-      if (sigmaInstance.detail) { 
-        return;
-      }
-      
-      var node = e.data.node;
-      var nodeId = node.id;
-      console.log("Node hover leave:", nodeId);
-      
-      // Restore original colors and clean up
-      sigmaInstance.iterNodes(function(n) {
-        if (n.originalColor !== undefined) {
-          n.color = n.originalColor;
-          delete n.originalColor;
-        }
-      });
-      
-      sigmaInstance.iterEdges(function(e_edge) {
-        if (e_edge.originalColor !== undefined) {
-          e_edge.color = e_edge.originalColor;
-          delete e_edge.originalColor;
-        }
-      });
-      
-      sigmaInstance.refresh();
-    });
-    console.log("Event binding completed successfully");
-  } catch (e) {
-    console.error("Error in bindEvents:", e);
-  }
+  // When a node is clicked, display its details
+  sigmaInstance.bind('upnodes', function(event) {
+    console.log("Node clicked:", event);
+    if (event.content && event.content.length > 0) {
+      var nodeId = event.content[0];
+      nodeActive(nodeId);
+    }
+  });
+  
+  // When stage is clicked, close the attribute pane
+  document.getElementById('sigma-canvas').addEventListener('click', function(evt) {
+    // Only process if we didn't click on a node (checked by looking at sigma's settings)
+    if (!sigmaInstance.isMouseDown && !sigmaInstance.detail) {
+      nodeNormal();
+    }
+  });
 }
 
-// Display node details (used when a node is clicked)
+// Display node details - without color changes
 function nodeActive(nodeId) {
   console.log("nodeActive called with id:", nodeId);
   
@@ -415,14 +320,19 @@ function nodeActive(nodeId) {
     return;
   }
   
+  if (sigmaInstance.detail && selectedNode && selectedNode.id === nodeId) {
+    // Already active, no need to redraw
+    return;
+  }
+  
+  // Reset previous selection if any
+  nodeNormal();
+  
   // Find the selected node
   var selected = null;
   sigmaInstance.iterNodes(function(n) {
     if (n.id == nodeId) {
       selected = n;
-      console.log("Found selected node:", n);
-      // Store original size if not already stored
-      if (n.originalSize === undefined) n.originalSize = n.size;
     }
   });
   
@@ -431,48 +341,87 @@ function nodeActive(nodeId) {
     return;
   }
   
-  console.log("Node found:", selected);
+  // Mark as in detail view
   sigmaInstance.detail = true;
+  
+  // Store reference to selected node
   selectedNode = selected;
   
   // Find neighbors
   var neighbors = {};
-  neighbors[nodeId] = true; // Include the selected node itself
-  
   sigmaInstance.iterEdges(function(e) {
-    if (e.source == nodeId) {
-      neighbors[e.target] = true;
-    } else if (e.target == nodeId) {
-      neighbors[e.source] = true;
+    if (e.source == nodeId || e.target == nodeId) {
+      neighbors[e.source == nodeId ? e.target : e.source] = true;
     }
   });
   
-  var neighborIds = Object.keys(neighbors);
-  console.log("Neighbors found (including self):", neighborIds.length);
-
-  // Dim non-neighbor nodes and edges
+  // In Sigma.js v0.1, we need to use a different approach for focus
+  // Store original colors for all nodes and edges
   sigmaInstance.iterNodes(function(n) {
-    if (neighbors[n.id]) {
-      n.color = n.originalColor || n.color;
-      if (n.id === nodeId) {
-        n.size = (n.originalSize || n.size) * 1.5;
-      }
-    } else {
-      n.color = greyColor;
+    n.attr = n.attr || {};
+    n.attr.originalColor = n.color;
+    
+    if (n.id === nodeId) {
+      // Make selected node slightly larger
+      n.attr.originalSize = n.size;
+      n.size = n.size * 1.5;
+    } else if (!neighbors[n.id]) {
+      // For non-neighbor nodes, we use a custom attribute to track they should be dimmed
+      // (Sigma v0.1 doesn't support opacity directly)
+      n.attr.dimmed = true;
+      // Apply a transparent version of the original color
+      var rgb = getRGBColor(n.color);
+      n.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.2)';
     }
   });
   
+  // Apply the same to edges
   sigmaInstance.iterEdges(function(e) {
-    if (neighbors[e.source] && neighbors[e.target]) {
-      e.color = e.originalColor || e.color;
+    e.attr = e.attr || {};
+    
+    // First, store the original color
+    if (!e.attr.originalColor) {
+      e.attr.originalColor = e.color;
+    }
+    
+    // Direct check for connected edges - need to account for both string and object references
+    let isConnected = false;
+    
+    // Check source connection
+    if (typeof e.source === 'object' && e.source !== null) {
+      if (e.source.id == nodeId) isConnected = true;
+    } else if (String(e.source) == String(nodeId)) {
+      isConnected = true;
+    }
+    
+    // Check target connection
+    if (typeof e.target === 'object' && e.target !== null) {
+      if (e.target.id == nodeId) isConnected = true;
+    } else if (String(e.target) == String(nodeId)) {
+      isConnected = true;
+    }
+    
+    // For debugging
+    if (isConnected) {
+      console.log("Edge connected:", e.id, 
+                 "Source:", (typeof e.source === 'object' ? e.source.id : e.source), 
+                 "Target:", (typeof e.target === 'object' ? e.target.id : e.target));
+      
+      // IMPORTANT: Make sure the color is the original (non-dimmed) color
+      // In Sigma.js v0.1, we need to completely reset the color property
+      e.color = e.attr.originalColor;
     } else {
-      e.color = greyColor;
+      // For non-connected edges, apply the dimmed color
+      let rgb = getRGBColor(e.attr.originalColor);
+      e.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.2)';
     }
   });
-
-  // Show node details panel
+  
+  // Force redraw
+  sigmaInstance.draw(2, 2, 2, 2);
+  
+  // Show node details panel and populate it
   try {
-    console.log("Displaying attribute pane");
     $('#attributepane')
       .show()
       .css({
@@ -486,7 +435,7 @@ function nodeActive(nodeId) {
     let dataHTML = '';
     for (let attr in selected) {
       if (attr !== 'id' && attr !== 'x' && attr !== 'y' && attr !== 'size' && attr !== 'color' && 
-          attr !== 'label' && attr !== 'originalColor' && attr !== 'originalSize' && attr !== 'hidden' && 
+          attr !== 'label' && attr !== 'hidden' && attr !== 'attr' &&
           typeof selected[attr] !== 'function' && attr !== 'displayX' && attr !== 'displayY' && 
           attr !== 'displaySize' && !attr.startsWith('_')) {
         dataHTML += '<div><strong>' + attr + ':</strong> ' + selected[attr] + '</div>';
@@ -498,11 +447,16 @@ function nodeActive(nodeId) {
     
     // Build connection list
     var connectionList = [];
-    sigmaInstance.iterNodes(function(n) {
-      if (neighbors[n.id] && n.id !== nodeId) {
-        connectionList.push('<li><a href="#" data-node-id="' + n.id + '">' + (n.label || n.id) + '</a></li>');
+    for (var id in neighbors) {
+      var neighborNode = null;
+      sigmaInstance.iterNodes(function(n) { 
+        if (n.id == id) neighborNode = n;
+      });
+      
+      if (neighborNode) {
+        connectionList.push('<li><a href="#" data-node-id="' + id + '">' + (neighborNode.label || id) + '</a></li>');
       }
-    });
+    }
     
     $('.nodeattributes .link ul')
       .html(connectionList.length ? connectionList.join('') : '<li>No connections</li>')
@@ -515,41 +469,48 @@ function nodeActive(nodeId) {
       nodeActive(nextNodeId);
     });
     
-    console.log("Attribute pane updated successfully");
   } catch (e) {
     console.error("Error updating attribute pane:", e);
   }
-  
-  // Force a refresh to show changes
-  sigmaInstance.refresh();
 }
 
-// Reset display (used when clicking outside nodes or closing the panel)
+// Reset display - without color changes
 function nodeNormal() {
   console.log("nodeNormal called");
-  if (!sigmaInstance) {
-    console.warn("Sigma instance not ready for nodeNormal");
+  
+  if (!sigmaInstance || !sigmaInstance.detail) {
+    // Not in detail view, nothing to reset
     return;
   }
   
   sigmaInstance.detail = false;
   
-  // Restore all nodes and edges to original state
+  // Restore all original node attributes
   sigmaInstance.iterNodes(function(n) {
-    if (n.originalColor !== undefined) {
-      n.color = n.originalColor;
-      delete n.originalColor;
+    n.attr = n.attr || {};
+    
+    // Restore original color
+    if (n.attr.originalColor) {
+      n.color = n.attr.originalColor;
+      delete n.attr.originalColor;
     }
-    if (n.originalSize !== undefined) {
-      n.size = n.originalSize;
-      delete n.originalSize;
+    
+    // Restore original size if it was modified
+    if (n.attr.originalSize) {
+      n.size = n.attr.originalSize;
+      delete n.attr.originalSize;
     }
+    
+    // Remove dimmed flag
+    delete n.attr.dimmed;
   });
   
+  // Restore original edge colors
   sigmaInstance.iterEdges(function(e) {
-    if (e.originalColor !== undefined) {
-      e.color = e.originalColor;
-      delete e.originalColor;
+    e.attr = e.attr || {};
+    if (e.attr.originalColor) {
+      e.color = e.attr.originalColor;
+      delete e.attr.originalColor;
     }
   });
   
@@ -562,64 +523,33 @@ function nodeNormal() {
     'visibility': 'hidden'
   });
   
-  // Refresh display
-  sigmaInstance.refresh();
-  console.log("Graph reset to normal state");
+  // Force redraw
+  sigmaInstance.draw(2, 2, 2, 2);
 }
 
-// Color nodes by attribute
-function colorNodesByAttribute(attribute) {
-  if (!sigmaInstance) return;
-  
-  console.log("Coloring nodes by attribute:", attribute);
-  // Get all unique values for the attribute
-  let values = {};
-  let valueCount = 0;
-  
-  sigmaInstance.iterNodes(function(n) {
-    let value = n[attribute] || 'unknown';
-    if (!values[value]) {
-      values[value] = true;
-      valueCount++;
+// Helper function to convert colors to RGB
+function getRGBColor(color) {
+  // Handle hex colors
+  if (color.charAt(0) === '#') {
+    var r = parseInt(color.substr(1, 2), 16);
+    var g = parseInt(color.substr(3, 2), 16);
+    var b = parseInt(color.substr(5, 2), 16);
+    return { r: r, g: g, b: b };
+  }
+  // Handle rgb colors
+  else if (color.startsWith('rgb')) {
+    var parts = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
+    if (parts) {
+      return {
+        r: parseInt(parts[1], 10),
+        g: parseInt(parts[2], 10),
+        b: parseInt(parts[3], 10)
+      };
     }
-  });
-  
-  // Assign colors to values
-  let valueColors = {};
-  let i = 0;
-  let palette = config.colorPalette || colors;
-  
-  for (let value in values) {
-    valueColors[value] = palette[i % palette.length];
-    i++;
   }
   
-  // Update node colors
-  sigmaInstance.iterNodes(function(n) {
-    let value = n[attribute] || 'unknown';
-    n.originalColor = valueColors[value];
-    n.color = valueColors[value];
-  });
-  
-  sigmaInstance.refresh();
-  
-  // Update color legend
-  updateColorLegend(valueColors);
-}
-
-// Update color legend
-function updateColorLegend(valueColors) {
-  let legendHTML = '';
-  
-  for (let value in valueColors) {
-    let color = valueColors[value];
-    if (typeof color === 'object') {
-      color = color.color;
-    }
-    legendHTML += '<div class="legenditem"><span class="legendcolor" style="background-color: ' + color + '"></span>' + value + '</div>';
-  }
-  
-  $('#colorLegend').html(legendHTML);
+  // Default fallback color
+  return { r: 100, g: 100, b: 100 };
 }
 
 // Search nodes by term
@@ -665,18 +595,6 @@ function updateLegend() {
   
   // Use configured node types with fallback to default types
   let typesToShow = config.nodeTypes || nodeTypes;
-  console.log("Node types for legend:", JSON.stringify(typesToShow));
-  
-  // If typesToShow is empty or has no properties, use a default set
-  if (!typesToShow || Object.keys(typesToShow).length === 0) {
-    console.log("No node types found, using defaults");
-    typesToShow = {
-      'paper': { color: '#2ca02c', size: 3 },
-      'author': { color: '#9467bd', size: 5 },
-      'organization': { color: '#1f77b4', size: 4 },
-      'document': { color: '#ff7f0e', size: 3 }
-    };
-  }
   
   // Create the HTML for the legend
   let legendHTML = '';
@@ -686,7 +604,6 @@ function updateLegend() {
     if (typesToShow.hasOwnProperty(type)) {
       let typeConfig = typesToShow[type];
       let color = typeConfig.color || '#ccc';
-      console.log(`Adding legend item for ${type} with color ${color}`);
       
       legendHTML += `<div class="legend-item">
                      <div class="legend-color" style="background-color: ${color};"></div>
@@ -695,64 +612,12 @@ function updateLegend() {
     }
   }
   
-  // If we still have no legend items, add some defaults
-  if (legendHTML === '') {
-    console.log("Legend is still empty, adding hardcoded defaults");
-    legendHTML = `
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: #2ca02c;"></div>
-        <div class="legend-label">Paper</div>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: #9467bd;"></div>
-        <div class="legend-label">Author</div>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: #1f77b4;"></div>
-        <div class="legend-label">Organization</div>
-      </div>
-    `;
-  }
-  
   // Add legend for edges
   legendHTML += `<div class="legend-item">
                    <div class="legend-line"></div>
                    <div class="legend-label">Connections</div>
                  </div>`;
   
-  // Set the HTML and make sure the element exists
-  let legendElement = document.getElementById('colorLegend');
-  if (legendElement) {
-    console.log("Legend element found, setting HTML:", legendHTML);
-    legendElement.innerHTML = legendHTML;
-    
-    // Force legend to be visible
-    legendElement.style.display = "block";
-    
-    // Also try with jQuery to ensure it's visible
-    $('#colorLegend').html(legendHTML).show();
-  } else {
-    console.error("Legend element #colorLegend not found in the DOM");
-    
-    // Try using jQuery as a fallback
-    console.log("Trying to find legend with jQuery");
-    if ($('#colorLegend').length) {
-      console.log("Found with jQuery, setting content");
-      $('#colorLegend').html(legendHTML).show();
-    } else {
-      console.error("Legend not found with jQuery either");
-    }
-  }
-}
-
-// Add a function to manually check and ensure our legend gets populated
-$(window).on('load', function() {
-  setTimeout(function() {
-    console.log("Window loaded, checking if legend is populated");
-    let legendElement = document.getElementById('colorLegend');
-    if (legendElement && (!legendElement.innerHTML || legendElement.innerHTML.trim() === '')) {
-      console.log("Legend is empty, manually updating it");
-      updateLegend();
-    }
-  }, 1000);
-}); 
+  // Set the HTML
+  $('#colorLegend').html(legendHTML);
+} 

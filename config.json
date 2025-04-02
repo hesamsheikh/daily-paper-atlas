@@ -23,7 +23,7 @@
     "hoverBehavior": "dim",
     "zoomButtons": true,
     "fancyBox": true,
-    "forceAtlas2": true,
+    "forceAtlas2": false,
     "forceAtlas2Time": 5000,
     "defaultColorAttribute": "type",
     "labelThreshold": 8
