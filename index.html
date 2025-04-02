@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en" xmlns:og="http://opengraphprotocol.org/schema/" xmlns:fb="http://www.facebook.com/2008/fbml" itemscope itemtype="http://schema.org/Map">
+
+<head>
+<title>Daily Paper Atlas</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,user-scalable=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="description" content="A network visualization of research papers and authors">
+
+<!-- Load jQuery first -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" type="text/javascript"></script>
+
+<!-- Load Sigma.js (exact SigmaJS version used in Model-Atlas) -->
+<script src="js/sigma/sigma.min.js" type="text/javascript"></script>
+<script src="js/sigma/sigma.parseJson.js" type="text/javascript"></script>
+<script src="js/sigma/plugins/sigma.plugins.filter.min.js" type="text/javascript"></script>
+
+<!-- Load fancybox for popups -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" type="text/javascript"></script>
+
+<!-- Load pako for decompression -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js" type="text/javascript"></script>
+
+<!-- CSS files -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css"/>
+<link rel="stylesheet" href="css/style.css" type="text/css" media="screen" />
+<link rel="stylesheet" media="screen and (max-height: 770px)" href="css/tablet.css" />
+
+<!-- Our main JavaScript file - load this after the libraries -->
+<script src="js/main.js" type="text/javascript"></script>
+
+</head>
+
+<body>
+  <div class="sigma-parent">
+    <div class="sigma-expand" id="sigma-canvas"></div>
+  </div>
+  <div id="mainpanel">
+    <div class="col">
+      <div id="title">Daily Paper Atlas</div>
+      <div id="titletext">A visualization of research papers and authors network. This interactive map shows relationships between papers and the researchers who created them.</div>
+    </div>
+    
+    <div class="col">
+      <div id="key-features">
+        <h2>Key Features</h2>
+        <ul>
+          <li><strong>Search:</strong> Find papers or authors by name.</li>
+          <li><strong>Color By:</strong> Customize node colors based on attributes.</li>
+          <li><strong>Filter:</strong> Filter the network by node type.</li>
+          <li><strong>Interactive Nodes:</strong> Click nodes to view details.</li>
+        </ul>
+      </div>
+      
+      <div id="legend">
+        <h2>Legend:</h2>
+        <div id="colorLegend"></div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div id="search">
+        <h2>Search:</h2>
+        <div class="search-wrapper">
+          <input type="text" id="search-input" placeholder="Search by name">
+          <div id="search-button">→</div>
+        </div>
+        <div class="results"></div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div id="coloringselect">
+        <h2>Color By:</h2>
+        <div class="select-wrapper">
+          <select id="color-attribute">
+            <option value="type">type</option>
+            <option value="year">year</option>
+            <option value="category">category</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col">
+      <div id="filteroptions">
+        <h2>Filter:</h2>
+        <div class="select-wrapper">
+          <select id="filter-select">
+            <option value="all">Show All</option>
+            <option value="papers">Papers Only</option>
+            <option value="authors">Authors Only</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="attributepane">
+    <div class="text">
+      <div class="headertext">Information Pane</div>
+      <div class="nodeattributes">
+        <div class="name">Select a node to see details</div>
+        <div class="data"></div>
+        <div class="p">Connections:</div>
+        <div class="link">
+          <ul></ul>
+        </div>
+      </div>
+      <div class="returntext">Return to the full network</div>
+    </div>
+  </div>
+  
+  <div id="zoom">
+    <div class="z" rel="in"></div>
+    <div class="z" rel="out"></div>
+    <div class="z" rel="center"></div>
+  </div>
+  
+  <div id="developercontainer">
+    Web rendering powered by <a href="https://sigmajs.org/" target="_blank">SigmaJS</a>. Developed by Daily Paper Atlas Team.
+  </div>
+</body>
+</html> 

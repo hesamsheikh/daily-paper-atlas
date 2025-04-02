@@ -1,0 +1,489 @@
+* {
+  padding: 0px;
+  margin: 0px;
+}
+
+.cf:before, .cf:after {
+  content: "";
+  display: table;
+}
+
+.cf:after {
+  clear: both;
+}
+
+.cf {
+  zoom: 1;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0px;
+  padding: 0px;
+  font-size: 12px;
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 1.25em;
+}
+
+.sigma-parent {
+  position: relative;
+  height: 100%;
+}
+
+.sigma-expand {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: #fff;
+  background-position: center center;
+  background-repeat: no-repeat;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+canvas#sigma_bg_1 {
+  display: none;
+}
+
+#attributepane {
+  display: none;
+  position: absolute;
+  height: auto;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  background-color: #fff;
+  margin: 0;
+  z-index: 1;
+  border-left: 1px solid #ccc;
+  overflow: auto;
+  padding: 0px;
+  padding-bottom: 60px;
+  box-shadow: -3px 0px 8px rgba(0, 0, 0, 0.15);
+}
+
+#attributepane .text {
+  padding: 10px;
+}
+
+#attributepane .headertext {
+  color: #fff;
+  background-color: #444;
+  margin: 0;
+  padding: 10px;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+#attributepane .returntext {
+  color: #1f77b4;
+  cursor: pointer;
+  margin-top: 10px;
+  padding: 5px;
+  border-top: 1px solid #ddd;
+  font-weight: bold;
+}
+
+#attributepane .returntext:hover {
+  text-decoration: underline;
+}
+
+.nodeattributes {
+  padding: 5px 0;
+}
+
+.nodeattributes .name {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.nodeattributes .data div {
+  margin-bottom: 5px;
+}
+
+.nodeattributes .p {
+  font-weight: bold;
+  margin: 10px 0 5px 0;
+}
+
+.nodeattributes .link ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nodeattributes .link ul li {
+  margin-bottom: 5px;
+}
+
+.nodeattributes .link ul li a {
+  color: #1f77b4;
+  text-decoration: none;
+}
+
+.nodeattributes .link ul li a:hover {
+  text-decoration: underline;
+}
+
+#attributepane .close {
+  padding-left: 14px;
+  margin-top: 10px;
+}
+
+#attributepane .close .c {
+  border-top: 2px solid #999;
+  padding: 10px 0 14px 0;
+}
+
+#attributepane .nodeattributes {
+  display: block;
+  height: 85%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-bottom: 1px solid #999;
+}
+
+#attributepane .name {
+  font-size: 14px;
+  cursor: default;
+  padding-bottom: 10px;
+  padding-top: 18px;
+  font-weight: bold;
+}
+
+#attributepane .data {
+  margin-bottom: 10px;
+}
+
+#attributepane .link {
+  padding: 0 0 0 4px;
+}
+
+#attributepane .link li {
+  padding-top: 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+#attributepane .p {
+  padding-top: 10px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.left-close {
+  cursor: pointer;
+  padding-left: 31px;
+  line-height: 36px;
+  background-repeat: no-repeat;
+  margin-bottom: 25px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+#developercontainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: left;
+  font-size: 11px;
+  color: #777;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 20;
+  padding: 5px 10px;
+  border-top: 1px solid #ddd;
+}
+
+#maintitle {
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+}
+
+#maintitle h1 {
+  font-size: 20px;
+}
+
+#mainpanel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: auto;
+  width: 240px;
+  height: auto;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.95);
+  border-right: 1px solid #ccc;
+  box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+  overflow: auto;
+  padding: 0;
+}
+
+#mainpanel .col {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+#title {
+  font-weight: bold;
+  text-align: left;
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+#titletext {
+  padding: 5px 0;
+}
+
+.info {
+  padding: 5px 0;
+}
+
+.info a {
+  color: #0000CC;
+  text-decoration: none;
+}
+
+.info a:hover {
+  text-decoration: underline;
+}
+
+#legend {
+  padding: 10px 0;
+}
+
+.legenditem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.legendcolor {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+
+.box {
+  margin-bottom: 10px;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#search {
+  margin-top: 10px;
+}
+
+#search input {
+  border: 1px solid #ccc;
+  padding: 5px 7px;
+  width: 80%;
+  box-sizing: border-box;
+  margin-bottom: 5px;
+}
+
+#search-button {
+  display: inline-block;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  padding: 3px 8px;
+  cursor: pointer;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.state {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-position: -131px -13px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+.results {
+  margin-top: 10px;
+  border: 1px solid #eee;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.results a {
+  display: block;
+  padding: 5px;
+  text-decoration: none;
+  color: #000;
+  border-bottom: 1px solid #eee;
+}
+
+.results a:hover {
+  background: #f5f5f5;
+}
+
+.select-wrapper {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.select-wrapper select {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+.select-wrapper:after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-style: solid;
+  border-width: 5px 5px 0 5px;
+  border-color: #999 transparent transparent transparent;
+  pointer-events: none;
+}
+
+#attributeselect, #coloringselect, #atlasselect {
+  margin-top: 15px;
+  padding-bottom: 10px;
+}
+
+.select {
+  border: 1px solid #ccc;
+  padding: 5px 7px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 5px;
+  cursor: pointer;
+  background: #f5f5f5;
+  position: relative;
+}
+
+.list {
+  margin-top: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+  border: 1px solid #eee;
+  background: #fff;
+}
+
+.list a {
+  display: block;
+  padding: 5px;
+  text-decoration: none;
+  color: #000;
+  border-bottom: 1px solid #eee;
+}
+
+.list a:hover {
+  background: #f5f5f5;
+}
+
+#colorLegend {
+  margin-top: 10px;
+}
+
+#colorLegend div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+#colorLegend span {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+#zoom {
+  position: absolute;
+  bottom: 40px;
+  right: 10px;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 5px;
+}
+
+#zoom .z {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ccc;
+  margin: 0 2px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 24px;
+  border-radius: 3px;
+  background: #fff;
+}
+
+#zoom .z:hover {
+  background: #f5f5f5;
+}
+
+#zoom .z[rel="in"]:before {
+  content: "+";
+}
+
+#zoom .z[rel="out"]:before {
+  content: "-";
+}
+
+#zoom .z[rel="center"]:before {
+  content: "⌂";
+}
+
+#key-features {
+  padding-top: 10px;
+}
+
+#key-features ul {
+  margin-left: 20px;
+  margin-top: 5px;
+}
+
+#key-features li {
+  margin-bottom: 5px;
+}
+
+#node-info {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 12px;
+  z-index: 10;
+  display: none;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+} 

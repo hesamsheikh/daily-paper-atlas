@@ -1,0 +1,70 @@
+{
+  "type": "network",
+  "version": "1.0",
+  "data": "paper_atlas_data.json",
+  "logo": {
+    "file": "",
+    "link": "",
+    "text": "Daily Paper Atlas"
+  },
+  "text": {
+    "more": "<p><strong>About:</strong> This visualization represents a network of research papers and authors, showing connections and relationships between them. The network is based on the graph.graphml file and converted to a format suitable for web visualization.</p>",
+    "intro": "A visualization of research papers and authors network. This interactive map shows relationships between papers and the researchers who created them.",
+    "title": "Daily Paper Atlas"
+  },
+  "legend": {
+    "edgeLabel": "Connection",
+    "colorLabel": "Node Type",
+    "nodeLabel": "Paper/Author"
+  },
+  "features": {
+    "search": true,
+    "groupSelectorAttribute": "type",
+    "hoverBehavior": "dim",
+    "zoomButtons": true,
+    "fancyBox": true,
+    "forceAtlas2": true,
+    "forceAtlas2Time": 5000,
+    "defaultColorAttribute": "type",
+    "labelThreshold": 8
+  },
+  "informationPanel": {
+    "groupByEdgeDirection": false,
+    "imageAttribute": false
+  },
+  "sigma": {
+    "drawingProperties": {
+      "defaultEdgeType": "curve",
+      "defaultHoverLabelBGColor": "#002147",
+      "defaultLabelBGColor": "#ddd",
+      "activeFontStyle": "bold",
+      "defaultLabelColor": "#000",
+      "labelThreshold": 8,
+      "defaultLabelHoverColor": "#fff",
+      "fontStyle": "bold",
+      "hoverFontStyle": "bold",
+      "defaultLabelSize": 14
+    },
+    "graphProperties": {
+      "maxEdgeSize": 2,
+      "minEdgeSize": 0.5,
+      "minNodeSize": 2,
+      "maxNodeSize": 10
+    },
+    "mouseProperties": {
+      "maxRatio": 20,
+      "minRatio": 0.75
+    }
+  },
+  "nodeTypes": {
+    "paper": { "color": "#2ca02c", "size": 3 },
+    "author": { "color": "#9467bd", "size": 5 },
+    "organization": { "color": "#1f77b4", "size": 4 },
+    "unknown": { "color": "#ff7f0e", "size": 3 }
+  },
+  "colorPalette": [
+    "#9467bd", "#2ca02c", "#1f77b4", "#17becf", 
+    "#ff7f0e", "#d62728", "#8c564b", "#e377c2", 
+    "#bcbd22", "#7f7f7f"
+  ]
+} 
