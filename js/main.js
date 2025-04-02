@@ -190,7 +190,7 @@ function initializeGraph(data) {
     
     // Configure drawing properties
     sigmaInstance.drawingProperties({
-      labelThreshold: config.sigma?.drawingProperties?.labelThreshold || 8,
+      labelThreshold: 3000, // Set to a high value to hide all labels by default
       defaultLabelColor: config.sigma?.drawingProperties?.defaultLabelColor || '#000',
       defaultLabelSize: config.sigma?.drawingProperties?.defaultLabelSize || 14,
       defaultEdgeType: config.sigma?.drawingProperties?.defaultEdgeType || 'curve',
@@ -307,6 +307,58 @@ function bindEvents() {
     }
   });
   
+  // Show label when hovering over a node
+  sigmaInstance.bind('overnodes', function(event) {
+    if (event.content && event.content.length > 0) {
+      var nodeId = event.content[0];
+      
+      sigmaInstance.iterNodes(function(n) {
+        if (n.id === nodeId) {
+          // Allow hover label to appear for any node being hovered over
+          n.forceLabel = true;
+          
+          // But in detail view, don't allow this to override the selected node's neighbors
+          if (sigmaInstance.detail && selectedNode && n.id !== selectedNode.id) {
+            // Store the hover state to know we need to reset this node specifically
+            n.attr = n.attr || {};
+            n.attr.isHovered = true;
+          }
+        }
+      });
+      
+      sigmaInstance.draw(2, 2, 2, 2);
+    }
+  });
+  
+  // Hide label when mouse leaves the node
+  sigmaInstance.bind('outnodes', function(event) {
+    // Handle nodes that were being hovered over
+    if (event.content && event.content.length > 0) {
+      var nodeId = event.content[0];
+      
+      sigmaInstance.iterNodes(function(n) {
+        if (n.id === nodeId) {
+          // Remove hover flag
+          if (n.attr && n.attr.isHovered) {
+            delete n.attr.isHovered;
+          }
+          
+          // In detail view, only the selected node should keep its label
+          if (sigmaInstance.detail) {
+            if (selectedNode && n.id !== selectedNode.id) {
+              n.forceLabel = false;
+            }
+          } else {
+            // In normal view, always hide the label when hover ends
+            n.forceLabel = false;
+          }
+        }
+      });
+    }
+    
+    sigmaInstance.draw(2, 2, 2, 2);
+  });
+  
   // When stage is clicked, close the attribute pane
   document.getElementById('sigma-canvas').addEventListener('click', function(evt) {
     // Only process if we didn't click on a node (checked by looking at sigma's settings)
@@ -366,11 +418,19 @@ function nodeActive(nodeId) {
     n.attr = n.attr || {};
     n.attr.originalColor = n.color;
     
+    // Store original forceLabel state
+    n.attr.originalForceLabel = n.forceLabel;
+    
     if (n.id === nodeId) {
       // Make selected node slightly larger based on config
       n.attr.originalSize = n.size;
       const sizeFactor = config.highlighting?.selectedNodeSizeFactor ?? 1.5;
       n.size = n.size * sizeFactor;
+      // Force label to show for selected node
+      n.forceLabel = true;
+    } else if (neighbors[n.id]) {
+      // Do not show labels for neighbors, only keep them visible
+      n.forceLabel = false;
     } else if (!neighbors[n.id]) {
       // For non-neighbor nodes, we use a custom attribute to track they should be dimmed
       // (Sigma v0.1 doesn't support opacity directly)
@@ -379,6 +439,8 @@ function nodeActive(nodeId) {
       var rgb = getRGBColor(n.color);
       const opacity = config.highlighting?.nodeOpacity ?? 0.2;
       n.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + opacity + ')';
+      // Hide labels for non-neighbor nodes
+      n.forceLabel = false;
     }
   });
   
@@ -574,16 +636,21 @@ function nodeNormal() {
     n.attr = n.attr || {};
     
     // Restore original color
-    if (n.attr.originalColor) {
+    if (typeof n.attr.originalColor !== 'undefined') {
       n.color = n.attr.originalColor;
       delete n.attr.originalColor;
     }
     
     // Restore original size if it was modified
-    if (n.attr.originalSize) {
+    if (typeof n.attr.originalSize !== 'undefined') {
       n.size = n.attr.originalSize;
       delete n.attr.originalSize;
     }
+    
+    // When returning to full network, always hide all labels
+    // Don't rely on originalForceLabel as it may maintain visibility
+    n.forceLabel = false;
+    delete n.attr.originalForceLabel;
     
     // Remove dimmed flag
     delete n.attr.dimmed;

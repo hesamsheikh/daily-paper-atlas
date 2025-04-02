@@ -56,22 +56,24 @@ canvas#sigma_bg_1 {
   display: none;
   position: absolute;
   height: auto;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 240px;
+  max-height: 80vh;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 20px;
+  width: 270px;
   background-color: #fff;
   margin: 0;
-  z-index: 1;
-  border-left: 1px solid #ccc;
-  overflow: auto;
-  padding: 0px;
-  padding-bottom: 60px;
-  box-shadow: -3px 0px 8px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #attributepane .text {
-  padding: 10px;
+  height: 100%;
+  width: 100%;
+  padding: 0;
 }
 
 #attributepane .headertext {
@@ -86,25 +88,31 @@ canvas#sigma_bg_1 {
 }
 
 #attributepane .returntext {
-  color: #1f77b4;
+  color: #ffffff;
   cursor: pointer;
-  margin-top: 10px;
-  padding: 5px;
-  border-top: 1px solid #ddd;
+  margin: 0;
+  padding: 12px;
   font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  background-color: #007AFF;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-bottom: none;
 }
 
 #attributepane .returntext:hover {
-  text-decoration: underline;
+  background-color: #0056b3;
 }
 
 .nodeattributes {
-  padding: 5px 0;
+  padding: 15px;
 }
 
 .nodeattributes .name {
-  font-size: 16px;
   font-weight: bold;
+  font-size: 16px;
   margin-bottom: 10px;
 }
 
@@ -147,11 +155,7 @@ canvas#sigma_bg_1 {
 }
 
 #attributepane .nodeattributes {
-  display: block;
-  height: 85%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  border-bottom: 1px solid #999;
+  padding: 15px;
 }
 
 #attributepane .name {
@@ -218,14 +222,15 @@ canvas#sigma_bg_1 {
 
 #mainpanel {
   position: absolute;
-  top: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   left: 10px;
   width: 250px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   z-index: 20;
-  max-height: calc(100% - 40px);
+  max-height: 80vh;
   overflow-y: auto;
 }
 
@@ -412,9 +417,10 @@ canvas#sigma_bg_1 {
 #zoom {
   position: absolute;
   bottom: 40px;
-  right: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid #ccc;
   border-radius: 3px;
   padding: 5px;
@@ -506,18 +512,21 @@ canvas#sigma_bg_1 {
 #attributepane .text .returntext {
   color: #ffffff;
   cursor: pointer;
-  margin: 10px 0 20px 0;
+  margin: 0;
   padding: 12px;
   font-weight: bold;
   font-size: 14px;
   text-align: center;
   background-color: #007AFF;
-  border-radius: 4px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-bottom: none;
 }
 
 #attributepane .text .returntext:hover {
   background-color: #0056b3;
+  color: #ffffff;
 }
 
 #attributepane .text .nodeattributes .nodetype {
@@ -525,4 +534,38 @@ canvas#sigma_bg_1 {
   margin-bottom: 12px;
   font-size: 13px;
   display: block;
+}
+
+#attributepane .text .nodeattributes .p {
+  font-weight: bold;
+  font-size: 14px;
+  margin: 15px 0 5px 0;
+}
+
+#attributepane .text .nodeattributes .link {
+  margin-bottom: 5px;
+}
+
+#attributepane .text .nodeattributes .link ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#attributepane .text .nodeattributes .link ul li {
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+#attributepane .text .nodeattributes .link ul li a {
+  color: #007AFF;
+  text-decoration: none;
+  display: block;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+#attributepane .text .nodeattributes .link ul li a:hover {
+  color: #0056b3;
+  text-decoration: underline;
 } 
