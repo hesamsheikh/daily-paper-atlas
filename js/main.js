@@ -37,7 +37,7 @@ $(document).ready(function() {
   });
 
   // Set up search functionality
-  $('#search-input').keyup(function(e) {
+  $('#search-input').on('input', function(e) {
     let searchTerm = $(this).val();
     if (searchTerm.length > 2) {
       searchNodes(searchTerm);
@@ -46,10 +46,13 @@ $(document).ready(function() {
     }
   });
   
-  $('#search-button').click(function() {
-    let searchTerm = $('#search-input').val();
-    if (searchTerm.length > 2) {
-      searchNodes(searchTerm);
+  // Add functionality for Enter key in search
+  $('#search-input').keypress(function(e) {
+    if (e.which === 13) { // Enter key
+      let searchTerm = $(this).val();
+      if (searchTerm.length > 0) {
+        searchNodes(searchTerm);
+      }
     }
   });
 
@@ -183,8 +186,8 @@ function initializeGraph(data) {
     for (let i = 0; i < graph.edges.length; i++) {
       let edge = graph.edges[i];
       sigmaInstance.addEdge(edge.id, edge.source, edge.target, {
-        size: edge.size || 1,
-        color: edge.color || '#ccc'
+        size: edge.size || 1
+        // Don't set edge color here - let the drawing properties handle it
       });
     }
     
@@ -200,7 +203,7 @@ function initializeGraph(data) {
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
       defaultNodeHoverColor: '#fff',
-      edgeColor: 'target',
+      edgeColor: 'target', // Use target node color for edges
       defaultEdgeColor: '#ccc'
     });
     
@@ -237,6 +240,7 @@ function initializeGraph(data) {
 function applyNodeStyles() {
   if (!sigmaInstance) return;
   try {
+    // First update node colors
     sigmaInstance.iterNodes(function(node) {
       if (node.type && config.nodeTypes && config.nodeTypes[node.type]) {
         node.color = config.nodeTypes[node.type].color;
@@ -246,6 +250,8 @@ function applyNodeStyles() {
         node.size = nodeTypes[node.type].size;
       }
     });
+    
+    // Ensure edges match the target node colors by redrawing
     sigmaInstance.refresh();
   } catch (e) {
     console.error("Error applying node styles:", e);
@@ -300,10 +306,20 @@ function bindEvents() {
   
   // When a node is clicked, display its details
   sigmaInstance.bind('upnodes', function(event) {
-    console.log("Node clicked:", event);
+    console.log("Node clicked event fired:", event);
     if (event.content && event.content.length > 0) {
       var nodeId = event.content[0];
-      nodeActive(nodeId);
+      console.log("Processing node click for node:", nodeId);
+      // Set a flag to indicate we're processing a node click
+      sigmaInstance.isMouseDown = true;
+      // Call nodeActive with a slight delay to ensure event handling is complete
+      setTimeout(function() {
+        nodeActive(nodeId);
+        // Reset the flag after processing
+        setTimeout(function() {
+          sigmaInstance.isMouseDown = false;
+        }, 10);
+      }, 10);
     }
   });
   
@@ -361,9 +377,16 @@ function bindEvents() {
   
   // When stage is clicked, close the attribute pane
   document.getElementById('sigma-canvas').addEventListener('click', function(evt) {
-    // Only process if we didn't click on a node (checked by looking at sigma's settings)
-    if (!sigmaInstance.isMouseDown && !sigmaInstance.detail) {
-      nodeNormal();
+    // If we're in detail view and didn't click on a node, return to full graph
+    if (sigmaInstance.detail && !sigmaInstance.isMouseDown) {
+      // Give priority to node click events by waiting
+      setTimeout(function() {
+        // Only proceed if isMouseDown is still false after the delay
+        if (!sigmaInstance.isMouseDown) {
+          console.log("Canvas clicked while in detail view - returning to full view");
+          nodeNormal();
+        }
+      }, 100);
     }
   });
 }
@@ -497,12 +520,11 @@ function nodeActive(nodeId) {
     
     // Apply different styles based on connection status
     if (isConnected) {
-      // Connected edge: make black and increase size
-      const highlightColor = config.highlighting?.highlightedEdgeColor ?? '#000000';
+      // For connected edges, keep their original color and just increase size
       const sizeFactor = config.highlighting?.highlightedEdgeSizeFactor ?? 2;
-      e.color = highlightColor;
       e.size = (e.attr.originalSize) * sizeFactor;
-      console.log("Edge highlighted:", e.id, "Source:", sourceId, "Target:", targetId, "Color set to:", e.color);
+      // Don't change the color property at all - preserve exactly as is
+      console.log("Edge connected to selected node:", e.id, "Source:", sourceId, "Target:", targetId, "Keeping original color");
     } else {
       // For non-connected edges, use a very light gray that's almost invisible
       // RGBA doesn't seem to work consistently in Sigma.js v0.1
@@ -519,13 +541,13 @@ function nodeActive(nodeId) {
   // Add debug check after redraw to verify edge colors
   setTimeout(function() {
     console.log("Verifying edge colors after redraw:");
-    let colorCount = { black: 0, transparent: 0, other: 0 };
+    let colorCount = { original: 0, greyed: 0, other: 0 };
     
     sigmaInstance.iterEdges(function(e) {
-      if (e.color === '#000000') {
-        colorCount.black++;
-      } else if (e.color.includes('rgba')) {
-        colorCount.transparent++;
+      if (e.color === '#ededed') {
+        colorCount.greyed++;
+      } else if (e.attr && e.attr.originalColor && e.color === e.attr.originalColor) {
+        colorCount.original++;
       } else {
         colorCount.other++;
       }
@@ -682,6 +704,15 @@ function nodeNormal() {
   
   // Force redraw
   sigmaInstance.draw(2, 2, 2, 2);
+  
+  // Ensure edge colors match target nodes after restoring
+  try {
+    if (typeof forceEdgeColors === 'function') {
+      forceEdgeColors();
+    }
+  } catch (e) {
+    console.error("Error refreshing edge colors:", e);
+  }
 }
 
 // Helper function to convert colors to RGB
@@ -768,12 +799,6 @@ function updateLegend() {
                    </div>`;
     }
   }
-  
-  // Add legend for edges
-  legendHTML += `<div class="legend-item">
-                   <div class="legend-line"></div>
-                   <div class="legend-label">Connections</div>
-                 </div>`;
   
   // Set the HTML
   $('#colorLegend').html(legendHTML);

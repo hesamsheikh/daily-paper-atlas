@@ -1,6 +1,6 @@
-// Force edge colors to match their source nodes
+// Force edge colors to match their target nodes
 function forceEdgeColors() {
-  console.log("Forcibly updating all edge colors to match their source nodes");
+  console.log("Forcibly updating all edge colors to match their target nodes");
   
   // Create a map of node IDs to colors for faster lookup
   let nodeColors = {};
@@ -8,14 +8,14 @@ function forceEdgeColors() {
     nodeColors[node.id] = node.color || '#aaa';
   });
   
-  // Update all edge colors based on their source nodes
+  // Update all edge colors based on their target nodes
   sigmaInstance.iterEdges(function(edge) {
-    const sourceColor = nodeColors[edge.source];
-    if (sourceColor) {
-      edge.color = sourceColor;
-      console.log(`Updated edge ${edge.id} color to ${sourceColor} from source ${edge.source}`);
+    const targetColor = nodeColors[edge.target];
+    if (targetColor) {
+      edge.color = targetColor;
+      console.log(`Updated edge ${edge.id} color to ${targetColor} from target ${edge.target}`);
     } else {
-      console.log(`Could not find color for edge ${edge.id}'s source node ${edge.source}`);
+      console.log(`Could not find color for edge ${edge.id}'s target node ${edge.target}`);
     }
   });
   
@@ -56,22 +56,22 @@ function initializeGraph(data) {
       });
     }
     
-    // First add all nodes, then add edges with colors matching their source nodes
+    // First add all nodes, then add edges with colors matching their target nodes
     for (let i = 0; i < graph.edges.length; i++) {
       let edge = graph.edges[i];
       
-      // Find source node to match its color
-      let sourceNodeColor = '#aaa';
+      // Find target node to match its color
+      let targetNodeColor = '#aaa';
       sigmaInstance.iterNodes(function(node) {
-        if (node.id == edge.source) {
-          sourceNodeColor = node.color;
-          console.log(`Setting edge ${edge.id} color to match source node ${node.id}: ${sourceNodeColor}`);
+        if (node.id == edge.target) {
+          targetNodeColor = node.color;
+          console.log(`Setting edge ${edge.id} color to match target node ${node.id}: ${targetNodeColor}`);
         }
       });
       
       sigmaInstance.addEdge(edge.id, edge.source, edge.target, {
         size: edge.size || 1,
-        color: sourceNodeColor
+        color: targetNodeColor
       });
     }
     
@@ -87,7 +87,7 @@ function initializeGraph(data) {
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
       defaultNodeHoverColor: '#fff',
-      edgeColor: 'source',  // This tells sigma to use source node color for edges
+      edgeColor: 'target',  // This tells sigma to use target node color for edges
       defaultEdgeColor: '#f00'  // Set a default that's noticeable so we can see if our explicit coloring fails
     });
     
@@ -139,10 +139,10 @@ function applyNodeStyles() {
       }
     });
     
-    // Then update edge colors to match their source nodes
+    // Then update edge colors to match their target nodes
     sigmaInstance.iterEdges(function(edge) {
       sigmaInstance.iterNodes(function(node) {
-        if (node.id == edge.source) {
+        if (node.id == edge.target) {
           edge.color = node.color;
         }
       });
@@ -188,10 +188,10 @@ function colorNodesByAttribute(attribute) {
     n.color = valueColors[value];
   });
   
-  // Update edge colors to match their source nodes
+  // Update edge colors to match their target nodes
   sigmaInstance.iterEdges(function(edge) {
     sigmaInstance.iterNodes(function(node) {
-      if (node.id == edge.source) {
+      if (node.id == edge.target) {
         edge.originalColor = node.color;
         edge.color = node.color;
       }
