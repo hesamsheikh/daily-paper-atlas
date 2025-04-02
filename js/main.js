@@ -362,63 +362,110 @@ function nodeActive(nodeId) {
     n.attr.originalColor = n.color;
     
     if (n.id === nodeId) {
-      // Make selected node slightly larger
+      // Make selected node slightly larger based on config
       n.attr.originalSize = n.size;
-      n.size = n.size * 1.5;
+      const sizeFactor = config.highlighting?.selectedNodeSizeFactor ?? 1.5;
+      n.size = n.size * sizeFactor;
     } else if (!neighbors[n.id]) {
       // For non-neighbor nodes, we use a custom attribute to track they should be dimmed
       // (Sigma v0.1 doesn't support opacity directly)
       n.attr.dimmed = true;
-      // Apply a transparent version of the original color
+      // Apply a transparent version of the original color using configured opacity
       var rgb = getRGBColor(n.color);
-      n.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.2)';
+      const opacity = config.highlighting?.nodeOpacity ?? 0.2;
+      n.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + opacity + ')';
     }
   });
   
   // Apply the same to edges
+  let debugCounts = { connected: 0, notConnected: 0 };
+  let edgeCount = 0;
+  
+  console.log("Starting edge processing for node:", nodeId);
+  
   sigmaInstance.iterEdges(function(e) {
+    edgeCount++;
     e.attr = e.attr || {};
     
-    // First, store the original color
-    if (!e.attr.originalColor) {
+    // First, ensure we store the original color (only once)
+    if (typeof e.attr.originalColor === 'undefined') {
       e.attr.originalColor = e.color;
+      console.log("Storing original color for edge:", e.id, "Color:", e.color);
     }
     
-    // Direct check for connected edges - need to account for both string and object references
-    let isConnected = false;
+    // Store original size for edges (only once)
+    if (typeof e.attr.originalSize === 'undefined') {
+      e.attr.originalSize = e.size || 1;
+    }
     
-    // Check source connection
+    // Get the actual source and target IDs from the edge
+    let sourceId, targetId;
+    
+    // Handle source ID extraction
     if (typeof e.source === 'object' && e.source !== null) {
-      if (e.source.id == nodeId) isConnected = true;
-    } else if (String(e.source) == String(nodeId)) {
-      isConnected = true;
-    }
-    
-    // Check target connection
-    if (typeof e.target === 'object' && e.target !== null) {
-      if (e.target.id == nodeId) isConnected = true;
-    } else if (String(e.target) == String(nodeId)) {
-      isConnected = true;
-    }
-    
-    // For debugging
-    if (isConnected) {
-      console.log("Edge connected:", e.id, 
-                 "Source:", (typeof e.source === 'object' ? e.source.id : e.source), 
-                 "Target:", (typeof e.target === 'object' ? e.target.id : e.target));
-      
-      // IMPORTANT: Make sure the color is the original (non-dimmed) color
-      // In Sigma.js v0.1, we need to completely reset the color property
-      e.color = e.attr.originalColor;
+      sourceId = e.source.id;
     } else {
-      // For non-connected edges, apply the dimmed color
-      let rgb = getRGBColor(e.attr.originalColor);
-      e.color = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.2)';
+      sourceId = String(e.source);
+    }
+    
+    // Handle target ID extraction
+    if (typeof e.target === 'object' && e.target !== null) {
+      targetId = e.target.id;
+    } else {
+      targetId = String(e.target);
+    }
+    
+    // For safe comparison, convert nodeId to string as well
+    const selectedNodeId = String(nodeId);
+    
+    // Check if this edge is connected to the selected node
+    const isConnected = (sourceId === selectedNodeId || targetId === selectedNodeId);
+    
+    // Track counts for debugging
+    if (isConnected) {
+      debugCounts.connected++;
+    } else {
+      debugCounts.notConnected++;
+    }
+    
+    // Apply different styles based on connection status
+    if (isConnected) {
+      // Connected edge: make black and increase size
+      const highlightColor = config.highlighting?.highlightedEdgeColor ?? '#000000';
+      const sizeFactor = config.highlighting?.highlightedEdgeSizeFactor ?? 2;
+      e.color = highlightColor;
+      e.size = (e.attr.originalSize) * sizeFactor;
+      console.log("Edge highlighted:", e.id, "Source:", sourceId, "Target:", targetId, "Color set to:", e.color);
+    } else {
+      // For non-connected edges, use a very light gray that's almost invisible
+      // RGBA doesn't seem to work consistently in Sigma.js v0.1
+      e.color = '#ededed';  // Very light gray
+      e.size = e.attr.originalSize * 0.5;  // Make non-connected edges thinner
     }
   });
   
+  console.log("Edge processing complete. Total edges:", edgeCount, "Connected:", debugCounts.connected, "Not connected:", debugCounts.notConnected);
+  
   // Force redraw
   sigmaInstance.draw(2, 2, 2, 2);
+  
+  // Add debug check after redraw to verify edge colors
+  setTimeout(function() {
+    console.log("Verifying edge colors after redraw:");
+    let colorCount = { black: 0, transparent: 0, other: 0 };
+    
+    sigmaInstance.iterEdges(function(e) {
+      if (e.color === '#000000') {
+        colorCount.black++;
+      } else if (e.color.includes('rgba')) {
+        colorCount.transparent++;
+      } else {
+        colorCount.other++;
+      }
+    });
+    
+    console.log("Edge color counts:", colorCount);
+  }, 100);
   
   // Show node details panel and populate it
   try {
@@ -430,16 +477,16 @@ function nodeActive(nodeId) {
         'opacity': '1'
       });
     
+    // Set the node name/title
     $('.nodeattributes .name').text(selected.label || selected.id);
     
+    // Display the node type
+    $('.nodeattributes .nodetype').text(selected.type ? 'Type: ' + selected.type : '');
+    
+    // Simplify data display to only show degree
     let dataHTML = '';
-    for (let attr in selected) {
-      if (attr !== 'id' && attr !== 'x' && attr !== 'y' && attr !== 'size' && attr !== 'color' && 
-          attr !== 'label' && attr !== 'hidden' && attr !== 'attr' &&
-          typeof selected[attr] !== 'function' && attr !== 'displayX' && attr !== 'displayY' && 
-          attr !== 'displaySize' && !attr.startsWith('_')) {
-        dataHTML += '<div><strong>' + attr + ':</strong> ' + selected[attr] + '</div>';
-      }
+    if (typeof selected.degree !== 'undefined') {
+      dataHTML = '<div><strong>Degree:</strong> ' + selected.degree + '</div>';
     }
     
     if (dataHTML === '') dataHTML = '<div>No additional attributes</div>';
@@ -508,9 +555,15 @@ function nodeNormal() {
   // Restore original edge colors
   sigmaInstance.iterEdges(function(e) {
     e.attr = e.attr || {};
-    if (e.attr.originalColor) {
+    // Restore color with explicit check for undefined
+    if (typeof e.attr.originalColor !== 'undefined') {
       e.color = e.attr.originalColor;
       delete e.attr.originalColor;
+    }
+    // Restore size with explicit check for undefined
+    if (typeof e.attr.originalSize !== 'undefined') {
+      e.size = e.attr.originalSize;
+      delete e.attr.originalSize;
     }
   });
   

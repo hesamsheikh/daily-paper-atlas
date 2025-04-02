@@ -495,4 +495,25 @@ canvas#sigma_bg_1 {
 
 .col {
   margin-bottom: 20px;
+}
+
+#attributepane .text .nodeattributes {
+  display: block;
+  padding: 10px;
+  color: #333;
+}
+
+#attributepane .text .returntext {
+  color: #007AFF;
+  cursor: pointer;
+  margin: 10px 0;
+  padding: 10px 10px 5px 10px;
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+}
+
+#attributepane .text .nodeattributes .nodetype {
+  font-style: italic;
+  color: #666;
+  margin-bottom: 8px;
 } 
