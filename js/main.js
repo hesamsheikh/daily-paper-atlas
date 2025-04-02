@@ -20,7 +20,14 @@ let nodeTypes = {
 
 // Initialize when document is ready
 $(document).ready(function() {
-  console.log("Document ready, initializing Daily Paper Atlas");
+  console.log("Document ready, checking Sigma.js availability");
+  
+  if (typeof sigma === 'undefined') {
+    console.error("Sigma.js is not loaded!");
+    return;
+  }
+  
+  console.log("Sigma.js version:", sigma.version);
   
   // Initialize attribute pane
   $('#attributepane').css('display', 'none');
@@ -91,6 +98,12 @@ $(document).ready(function() {
     let filterValue = $(this).val();
     filterByNodeType(filterValue);
   });
+
+  // Call updateLegend immediately to ensure it runs
+  setTimeout(function() {
+    console.log("Forcing legend update from document ready");
+    updateLegend();
+  }, 500);
 });
 
 // Load graph data
@@ -141,6 +154,13 @@ function initializeGraph(data) {
     // Initialize Sigma instance using the older sigma.init pattern
     sigmaInstance = sigma.init(document.getElementById('sigma-canvas'));
     
+    console.log("Sigma instance created:", sigmaInstance);
+    
+    if (!sigmaInstance) {
+      console.error("Failed to create sigma instance");
+      return;
+    }
+    
     // Configure mouse properties to ensure events work
     sigmaInstance.mouseProperties({
       maxRatio: 32,
@@ -151,25 +171,30 @@ function initializeGraph(data) {
     
     console.log("Sigma mouse properties configured");
     
-    // Add nodes and edges to sigma
+    // Add nodes to the graph
+    console.log("Adding nodes to sigma instance...");
     for (let i = 0; i < graph.nodes.length; i++) {
       let node = graph.nodes[i];
+      let nodeColor = node.color || (node.type && config.nodeTypes && config.nodeTypes[node.type] ? 
+                      config.nodeTypes[node.type].color : nodeTypes[node.type]?.color || '#666');
+      
       sigmaInstance.addNode(node.id, {
         label: node.label || node.id,
         x: node.x || Math.random() * 100,
         y: node.y || Math.random() * 100,
         size: node.size || 1,
-        color: node.color || (node.type && config.nodeTypes && config.nodeTypes[node.type] ? 
-                  config.nodeTypes[node.type].color : nodeTypes[node.type]?.color || '#666'),
+        color: nodeColor,
         type: node.type
       });
     }
     
+    // Add edges to the graph
+    console.log("Adding edges to sigma instance...");
     for (let i = 0; i < graph.edges.length; i++) {
       let edge = graph.edges[i];
       sigmaInstance.addEdge(edge.id, edge.source, edge.target, {
         size: edge.size || 1,
-        color: edge.color || '#aaa'
+        color: edge.color || '#ccc'
       });
     }
     
@@ -184,7 +209,9 @@ function initializeGraph(data) {
       borderSize: 2,
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
-      defaultNodeHoverColor: '#fff'
+      defaultNodeHoverColor: '#fff',
+      edgeColor: 'target',
+      defaultEdgeColor: '#ccc'
     });
     
     // Configure graph properties
@@ -192,63 +219,22 @@ function initializeGraph(data) {
       minNodeSize: config.sigma?.graphProperties?.minNodeSize || 1,
       maxNodeSize: config.sigma?.graphProperties?.maxNodeSize || 8,
       minEdgeSize: config.sigma?.graphProperties?.minEdgeSize || 0.5,
-      maxEdgeSize: config.sigma?.graphProperties?.maxEdgeSize || 2,
-      sideMargin: 50
+      maxEdgeSize: config.sigma?.graphProperties?.maxEdgeSize || 2
     });
     
-    // Force redraw and refresh
-    sigmaInstance.draw(2, 2, 2, 2);
-    sigmaInstance.refresh();
+    // Force initial rendering
+    sigmaInstance.draw();
     
-    console.log("Sigma instance created and configured:", sigmaInstance);
+    console.log("Graph data loaded into sigma instance");
     
-    // Initialize ForceAtlas2 layout if configured
-    if (config.features && config.features.forceAtlas2) {
-      console.log("Starting ForceAtlas2 layout...");
-      sigmaInstance.startForceAtlas2();
-      
-      setTimeout(function() {
-        sigmaInstance.stopForceAtlas2();
-        console.log("ForceAtlas2 layout completed");
-        sigmaInstance.refresh();
-        
-        // Initialize node colors and sizes by type
-        applyNodeStyles();
-        
-        // Initialize filtering
-        initFilters();
-        
-        // If a default color attribute is set, apply it
-        if (config.features && config.features.defaultColorAttribute) {
-          $('#color-attribute').val(config.features.defaultColorAttribute);
-          colorNodesByAttribute(config.features.defaultColorAttribute);
-        } else {
-          updateColorLegend(nodeTypes);
-        }
-        
-        // Bind events
-        bindEvents();
-      }, config.features?.forceAtlas2Time || 5000);
-    } else {
-      // Initialize node colors and sizes by type
-      applyNodeStyles();
-      
-      // Initialize filtering
-      initFilters();
-      
-      // If a default color attribute is set, apply it
-      if (config.features && config.features.defaultColorAttribute) {
-        $('#color-attribute').val(config.features.defaultColorAttribute);
-        colorNodesByAttribute(config.features.defaultColorAttribute);
-      } else {
-        updateColorLegend(nodeTypes);
-      }
-      
-      // Bind events
-      bindEvents();
-    }
+    // Bind events
+    console.log("Binding events...");
+    bindEvents();
+    
+    console.log("Graph initialization complete");
+    
   } catch (e) {
-    console.error("Error initializing sigma instance:", e);
+    console.error("Error in initializeGraph:", e, e.stack);
   }
 }
 
@@ -315,60 +301,52 @@ function bindEvents() {
     return;
   }
   
-  console.log("Binding sigma events to instance:", sigmaInstance);
+  console.log("Starting to bind sigma events...");
   
-  // Add a direct click handler to the sigma canvas
-  document.getElementById('sigma-canvas').addEventListener('click', function(evt) {
-    console.log("Canvas clicked, checking if it's on a node");
-    // The event happened on canvas, now check if it was on a node
-    var x = evt.offsetX || evt.layerX;
-    var y = evt.offsetY || evt.layerY;
-    
-    var nodeFound = false;
-    sigmaInstance.iterNodes(function(n) {
-      if (!nodeFound && n.displayX && n.displayY && n.displaySize) {
-        var dx = n.displayX - x;
-        var dy = n.displayY - y;
-        var distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < n.displaySize) {
-          console.log("Node found under click:", n.id);
-          nodeFound = true;
-          nodeActive(n.id);
-        }
-      }
-    });
-    
-    if (!nodeFound) {
-      console.log("No node found under click, closing node panel");
-      nodeNormal();
-    }
-  });
-  
-  // Still try to use sigma's events
   try {
     // When a node is clicked, display its details
     sigmaInstance.bind('clickNode', function(e) {
-      var node = e.target || e.data.node || e.data;
-      console.log("Official clickNode event received:", e);
-      var nodeId = node.id || node;
-      console.log("Node clicked via official event:", nodeId);
-      nodeActive(nodeId);
+      console.log("Node clicked!", e);
+      if (!e || !e.data || !e.data.node) {
+        console.error("Click event missing node data");
+        return;
+      }
+      
+      var node = e.data.node;
+      console.log("Clicked node:", node);
+      
+      if (e.data.captor.isDragging) {
+        console.log("Ignoring click while dragging");
+        return;
+      }
+      
+      nodeActive(node.id);
     });
     
     // When stage is clicked, close the attribute pane
-    sigmaInstance.bind('clickStage', function() {
-      console.log("Official clickStage event received");
-      nodeNormal();
+    sigmaInstance.bind('clickStage', function(e) {
+      console.log("Stage clicked!", e);
+      if (!e.data.node) {
+        nodeNormal();
+      }
+    });
+    
+    // Add direct DOM click handler as backup
+    document.getElementById('sigma-canvas').addEventListener('click', function(e) {
+      console.log("Direct canvas click detected", e);
     });
     
     // Highlight connected nodes on hover
     sigmaInstance.bind('overNode', function(e) {
-      var node = e.target || e.data.node || e.data;
-      var nodeId = node.id || node;
+      // --- Completely disable hover effects when a node is selected --- 
+      if (sigmaInstance.detail) {
+        return; 
+      }
+      
+      var node = e.data.node;
+      var nodeId = node.id;
       console.log("Node hover enter:", nodeId);
       
-      // First identify neighbors
       var neighbors = {};
       sigmaInstance.iterEdges(function(edge) {
         if (edge.source == nodeId || edge.target == nodeId) {
@@ -376,21 +354,18 @@ function bindEvents() {
         }
       });
       
-      // Then update node and edge colors
-      sigmaInstance.iterNodes(function(node) {
-        if (node.id == nodeId || neighbors[node.id]) {
-          node.originalColor = node.color;
-        } else {
-          node.originalColor = node.originalColor || node.color;
-          node.color = greyColor;
+      sigmaInstance.iterNodes(function(n) {
+        // Store original color only if not already stored
+        if (n.originalColor === undefined) n.originalColor = n.color;
+        if (n.id != nodeId && !neighbors[n.id]) {
+          n.color = greyColor;
         }
       });
       
       sigmaInstance.iterEdges(function(edge) {
-        if (edge.source == nodeId || edge.target == nodeId) {
-          edge.originalColor = edge.color;
-        } else {
-          edge.originalColor = edge.originalColor || edge.color;
+        // Store original color only if not already stored
+        if (edge.originalColor === undefined) edge.originalColor = edge.color;
+        if (edge.source != nodeId && edge.target != nodeId) {
           edge.color = greyColor;
         }
       });
@@ -399,25 +374,35 @@ function bindEvents() {
     });
     
     sigmaInstance.bind('outNode', function(e) {
-      var node = e.target || e.data.node || e.data;
-      var nodeId = node.id || node;
+      // --- Completely disable hover effects when a node is selected --- 
+      if (sigmaInstance.detail) { 
+        return;
+      }
+      
+      var node = e.data.node;
+      var nodeId = node.id;
       console.log("Node hover leave:", nodeId);
       
-      if (!sigmaInstance.detail) {
-        sigmaInstance.iterNodes(function(n) {
-          n.color = n.originalColor || n.color;
-        });
-        
-        sigmaInstance.iterEdges(function(e) {
-          e.color = e.originalColor || e.color;
-        });
-        
-        sigmaInstance.refresh();
-      }
+      // Restore original colors and clean up
+      sigmaInstance.iterNodes(function(n) {
+        if (n.originalColor !== undefined) {
+          n.color = n.originalColor;
+          delete n.originalColor;
+        }
+      });
+      
+      sigmaInstance.iterEdges(function(e_edge) {
+        if (e_edge.originalColor !== undefined) {
+          e_edge.color = e_edge.originalColor;
+          delete e_edge.originalColor;
+        }
+      });
+      
+      sigmaInstance.refresh();
     });
-    console.log("Sigma events bound successfully");
+    console.log("Event binding completed successfully");
   } catch (e) {
-    console.error("Error binding sigma events:", e);
+    console.error("Error in bindEvents:", e);
   }
 }
 
@@ -425,133 +410,161 @@ function bindEvents() {
 function nodeActive(nodeId) {
   console.log("nodeActive called with id:", nodeId);
   
-  // Find the node
-  var node = null;
+  if (!sigmaInstance) {
+    console.error("Sigma instance not ready for nodeActive");
+    return;
+  }
+  
+  // Find the selected node
+  var selected = null;
   sigmaInstance.iterNodes(function(n) {
     if (n.id == nodeId) {
-      node = n;
+      selected = n;
+      console.log("Found selected node:", n);
+      // Store original size if not already stored
+      if (n.originalSize === undefined) n.originalSize = n.size;
     }
   });
   
-  if (!node) {
+  if (!selected) {
     console.error("Node not found:", nodeId);
     return;
   }
   
-  console.log("Node found:", node);
+  console.log("Node found:", selected);
   sigmaInstance.detail = true;
-  selectedNode = node;
+  selectedNode = selected;
   
   // Find neighbors
   var neighbors = {};
+  neighbors[nodeId] = true; // Include the selected node itself
+  
   sigmaInstance.iterEdges(function(e) {
-    if (e.source == nodeId || e.target == nodeId) {
-      neighbors[e.source == nodeId ? e.target : e.source] = {
-        name: e.label || "",
-        color: e.color
-      };
+    if (e.source == nodeId) {
+      neighbors[e.target] = true;
+    } else if (e.target == nodeId) {
+      neighbors[e.source] = true;
     }
   });
   
-  console.log("Neighbors found:", Object.keys(neighbors).length);
-  
-  // Update node appearance
+  var neighborIds = Object.keys(neighbors);
+  console.log("Neighbors found (including self):", neighborIds.length);
+
+  // Dim non-neighbor nodes and edges
   sigmaInstance.iterNodes(function(n) {
-    if (n.id == nodeId) {
+    if (neighbors[n.id]) {
       n.color = n.originalColor || n.color;
-      n.size = n.size * 1.5; // Emphasize selected node
-    } else if (neighbors[n.id]) {
-      n.color = n.originalColor || n.color;
+      if (n.id === nodeId) {
+        n.size = (n.originalSize || n.size) * 1.5;
+      }
     } else {
-      n.originalColor = n.originalColor || n.color;
       n.color = greyColor;
     }
   });
   
-  // Refresh display
-  sigmaInstance.refresh();
-  
-  // Populate connection list
-  var connectionList = [];
-  for (var id in neighbors) {
-    var neighbor = null;
-    sigmaInstance.iterNodes(function(n) {
-      if (n.id == id) {
-        neighbor = n;
-      }
-    });
-    
-    if (neighbor) {
-      connectionList.push('<li><a href="#" data-node-id="' + id + '">' + (neighbor.label || id) + '</a></li>');
+  sigmaInstance.iterEdges(function(e) {
+    if (neighbors[e.source] && neighbors[e.target]) {
+      e.color = e.originalColor || e.color;
+    } else {
+      e.color = greyColor;
     }
-  }
-  
+  });
+
   // Show node details panel
   try {
     console.log("Displaying attribute pane");
-    // Make absolutely sure the panel is visible with both CSS approaches
-    $('#attributepane').show().css('display', 'block');
+    $('#attributepane')
+      .show()
+      .css({
+        'display': 'block',
+        'visibility': 'visible',
+        'opacity': '1'
+      });
     
-    // Update panel content
-    $('.nodeattributes .name').text(node.label || node.id);
+    $('.nodeattributes .name').text(selected.label || selected.id);
     
     let dataHTML = '';
-    for (let attr in node) {
+    for (let attr in selected) {
       if (attr !== 'id' && attr !== 'x' && attr !== 'y' && attr !== 'size' && attr !== 'color' && 
-          attr !== 'label' && attr !== 'originalColor' && attr !== 'hidden' && 
-          typeof node[attr] !== 'function' && attr !== 'displayX' && attr !== 'displayY' && 
-          attr !== 'displaySize') {
-        dataHTML += '<div><strong>' + attr + ':</strong> ' + node[attr] + '</div>';
+          attr !== 'label' && attr !== 'originalColor' && attr !== 'originalSize' && attr !== 'hidden' && 
+          typeof selected[attr] !== 'function' && attr !== 'displayX' && attr !== 'displayY' && 
+          attr !== 'displaySize' && !attr.startsWith('_')) {
+        dataHTML += '<div><strong>' + attr + ':</strong> ' + selected[attr] + '</div>';
       }
     }
     
-    if (dataHTML === '') {
-      dataHTML = '<div>No additional attributes</div>';
-    }
-    
+    if (dataHTML === '') dataHTML = '<div>No additional attributes</div>';
     $('.nodeattributes .data').html(dataHTML);
-    $('.nodeattributes .link ul').html(connectionList.length ? connectionList.join('') : '<li>No connections</li>');
     
-    // Set up click event for neighbor nodes
-    $('.nodeattributes .link ul li a').click(function(e) {
-      e.preventDefault();
-      var id = $(this).data('node-id');
-      nodeActive(id);
+    // Build connection list
+    var connectionList = [];
+    sigmaInstance.iterNodes(function(n) {
+      if (neighbors[n.id] && n.id !== nodeId) {
+        connectionList.push('<li><a href="#" data-node-id="' + n.id + '">' + (n.label || n.id) + '</a></li>');
+      }
     });
     
-    console.log("Attribute pane updated with node details");
+    $('.nodeattributes .link ul')
+      .html(connectionList.length ? connectionList.join('') : '<li>No connections</li>')
+      .css('display', 'block');
+    
+    // Bind click events for neighbor links
+    $('.nodeattributes .link ul li a').click(function(e) {
+      e.preventDefault();
+      var nextNodeId = $(this).data('node-id');
+      nodeActive(nextNodeId);
+    });
+    
+    console.log("Attribute pane updated successfully");
   } catch (e) {
     console.error("Error updating attribute pane:", e);
   }
+  
+  // Force a refresh to show changes
+  sigmaInstance.refresh();
 }
 
 // Reset display (used when clicking outside nodes or closing the panel)
 function nodeNormal() {
   console.log("nodeNormal called");
-  if (sigmaInstance) {
-    sigmaInstance.detail = false;
-    selectedNode = null;
-    
-    // Reset node appearance
-    sigmaInstance.iterNodes(function(node) {
-      node.color = node.originalColor || node.color;
-      // Reset size to original
-      if (node.type && config.nodeTypes && config.nodeTypes[node.type]) {
-        node.size = config.nodeTypes[node.type].size;
-      } else if (node.type && nodeTypes[node.type]) {
-        node.size = nodeTypes[node.type].size;
-      }
-    });
-    
-    // Reset edge appearance
-    sigmaInstance.iterEdges(function(edge) {
-      edge.color = edge.originalColor || edge.color;
-    });
-    
-    // Hide panel and refresh display
-    $('#attributepane').css('display', 'none');
-    sigmaInstance.refresh();
+  if (!sigmaInstance) {
+    console.warn("Sigma instance not ready for nodeNormal");
+    return;
   }
+  
+  sigmaInstance.detail = false;
+  
+  // Restore all nodes and edges to original state
+  sigmaInstance.iterNodes(function(n) {
+    if (n.originalColor !== undefined) {
+      n.color = n.originalColor;
+      delete n.originalColor;
+    }
+    if (n.originalSize !== undefined) {
+      n.size = n.originalSize;
+      delete n.originalSize;
+    }
+  });
+  
+  sigmaInstance.iterEdges(function(e) {
+    if (e.originalColor !== undefined) {
+      e.color = e.originalColor;
+      delete e.originalColor;
+    }
+  });
+  
+  // Reset selected node
+  selectedNode = null;
+  
+  // Hide attribute pane
+  $('#attributepane').css({
+    'display': 'none',
+    'visibility': 'hidden'
+  });
+  
+  // Refresh display
+  sigmaInstance.refresh();
+  console.log("Graph reset to normal state");
 }
 
 // Color nodes by attribute
@@ -644,4 +657,102 @@ function searchNodes(term) {
     let nodeId = $(this).data('node-id');
     nodeActive(nodeId);
   });
-} 
+}
+
+// Update the legend with node type information
+function updateLegend() {
+  console.log("Updating legend with node types");
+  
+  // Use configured node types with fallback to default types
+  let typesToShow = config.nodeTypes || nodeTypes;
+  console.log("Node types for legend:", JSON.stringify(typesToShow));
+  
+  // If typesToShow is empty or has no properties, use a default set
+  if (!typesToShow || Object.keys(typesToShow).length === 0) {
+    console.log("No node types found, using defaults");
+    typesToShow = {
+      'paper': { color: '#2ca02c', size: 3 },
+      'author': { color: '#9467bd', size: 5 },
+      'organization': { color: '#1f77b4', size: 4 },
+      'document': { color: '#ff7f0e', size: 3 }
+    };
+  }
+  
+  // Create the HTML for the legend
+  let legendHTML = '';
+  
+  // Make sure we're iterating through the object properties properly
+  for (let type in typesToShow) {
+    if (typesToShow.hasOwnProperty(type)) {
+      let typeConfig = typesToShow[type];
+      let color = typeConfig.color || '#ccc';
+      console.log(`Adding legend item for ${type} with color ${color}`);
+      
+      legendHTML += `<div class="legend-item">
+                     <div class="legend-color" style="background-color: ${color};"></div>
+                     <div class="legend-label">${type}</div>
+                   </div>`;
+    }
+  }
+  
+  // If we still have no legend items, add some defaults
+  if (legendHTML === '') {
+    console.log("Legend is still empty, adding hardcoded defaults");
+    legendHTML = `
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #2ca02c;"></div>
+        <div class="legend-label">Paper</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #9467bd;"></div>
+        <div class="legend-label">Author</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #1f77b4;"></div>
+        <div class="legend-label">Organization</div>
+      </div>
+    `;
+  }
+  
+  // Add legend for edges
+  legendHTML += `<div class="legend-item">
+                   <div class="legend-line"></div>
+                   <div class="legend-label">Connections</div>
+                 </div>`;
+  
+  // Set the HTML and make sure the element exists
+  let legendElement = document.getElementById('colorLegend');
+  if (legendElement) {
+    console.log("Legend element found, setting HTML:", legendHTML);
+    legendElement.innerHTML = legendHTML;
+    
+    // Force legend to be visible
+    legendElement.style.display = "block";
+    
+    // Also try with jQuery to ensure it's visible
+    $('#colorLegend').html(legendHTML).show();
+  } else {
+    console.error("Legend element #colorLegend not found in the DOM");
+    
+    // Try using jQuery as a fallback
+    console.log("Trying to find legend with jQuery");
+    if ($('#colorLegend').length) {
+      console.log("Found with jQuery, setting content");
+      $('#colorLegend').html(legendHTML).show();
+    } else {
+      console.error("Legend not found with jQuery either");
+    }
+  }
+}
+
+// Add a function to manually check and ensure our legend gets populated
+$(window).on('load', function() {
+  setTimeout(function() {
+    console.log("Window loaded, checking if legend is populated");
+    let legendElement = document.getElementById('colorLegend');
+    if (legendElement && (!legendElement.innerHTML || legendElement.innerHTML.trim() === '')) {
+      console.log("Legend is empty, manually updating it");
+      updateLegend();
+    }
+  }, 1000);
+}); 

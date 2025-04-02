@@ -48,15 +48,13 @@
         <h2>Key Features</h2>
         <ul>
           <li><strong>Search:</strong> Find papers or authors by name.</li>
-          <li><strong>Color By:</strong> Customize node colors based on attributes.</li>
-          <li><strong>Filter:</strong> Filter the network by node type.</li>
           <li><strong>Interactive Nodes:</strong> Click nodes to view details.</li>
         </ul>
       </div>
       
       <div id="legend">
         <h2>Legend:</h2>
-        <div id="colorLegend"></div>
+        <div id="colorLegend" style="display: block;"></div>
       </div>
     </div>
     
@@ -68,32 +66,6 @@
           <div id="search-button">→</div>
         </div>
         <div class="results"></div>
-      </div>
-    </div>
-    
-    <div class="col">
-      <div id="coloringselect">
-        <h2>Color By:</h2>
-        <div class="select-wrapper">
-          <select id="color-attribute">
-            <option value="type">type</option>
-            <option value="year">year</option>
-            <option value="category">category</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col">
-      <div id="filteroptions">
-        <h2>Filter:</h2>
-        <div class="select-wrapper">
-          <select id="filter-select">
-            <option value="all">Show All</option>
-            <option value="papers">Papers Only</option>
-            <option value="authors">Authors Only</option>
-          </select>
-        </div>
       </div>
     </div>
   </div>
