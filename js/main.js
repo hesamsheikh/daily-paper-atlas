@@ -38,6 +38,9 @@ $(document).ready(function() {
       config.data = 'data/' + config.data;
     }
     
+    // Initialize the edge color toggle after config is loaded
+    $('#grey-edges-toggle').prop('checked', config.features?.useGreyEdges || false);
+    
     loadGraph();
   }).fail(function(jqXHR, textStatus, errorThrown) {
     console.error("Failed to load config:", textStatus, errorThrown);
@@ -220,9 +223,11 @@ function initializeGraph(data) {
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
       defaultNodeHoverColor: '#fff',
-      edgeColor: 'target', // Use target node color for edges
+      edgeColor: 'default', // Always use solid grey edges
       defaultEdgeColor: '#ccc'
     });
+    
+    console.log("Edge color mode: solid grey");
     
     // Configure graph properties
     sigmaInstance.graphProperties({
@@ -925,6 +930,12 @@ function updateLegend() {
                    </div>`;
     }
   }
+  
+  // Add edge color information - always grey
+  legendHTML += `<div class="legend-item">
+                 <div class="legend-line" style="background-color: #ccc;"></div>
+                 <div class="legend-label">Edge (Solid Grey)</div>
+               </div>`;
   
   // Set the HTML
   $('#colorLegend').html(legendHTML);

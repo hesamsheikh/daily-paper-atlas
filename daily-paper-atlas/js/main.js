@@ -1,26 +1,114 @@
 // Force edge colors to match their target nodes
 function forceEdgeColors() {
-  console.log("Forcibly updating all edge colors to match their target nodes");
+  console.log("Forcibly updating edge colors based on connection type");
   
-  // Create a map of node IDs to colors for faster lookup
-  let nodeColors = {};
+  // Create a map of node IDs to node info for faster lookup
+  let nodeInfo = {};
+  let typeCounts = { paper: 0, author: 0, organization: 0, unknown: 0 };
+  
   sigmaInstance.iterNodes(function(node) {
-    nodeColors[node.id] = node.color || '#aaa';
+    // Make sure node type is properly set
+    let nodeType = node.type || 'unknown';
+    typeCounts[nodeType] = (typeCounts[nodeType] || 0) + 1;
+    
+    nodeInfo[node.id] = {
+      color: node.color || '#aaa',
+      type: nodeType
+    };
   });
   
-  // Update all edge colors based on their target nodes
+  console.log("Node type counts:", typeCounts);
+  
+  // Track edge coloring statistics
+  let edgeStats = {
+    total: 0,
+    paperAuthor: 0,
+    paperOrg: 0,
+    other: 0
+  };
+  
+  // Update all edge colors based on connection type
   sigmaInstance.iterEdges(function(edge) {
-    const targetColor = nodeColors[edge.target];
-    if (targetColor) {
-      edge.color = targetColor;
-      console.log(`Updated edge ${edge.id} color to ${targetColor} from target ${edge.target}`);
-    } else {
-      console.log(`Could not find color for edge ${edge.id}'s target node ${edge.target}`);
+    edgeStats.total++;
+    
+    const sourceNode = nodeInfo[edge.source];
+    const targetNode = nodeInfo[edge.target];
+    
+    if (!sourceNode || !targetNode) {
+      console.log(`Could not find node info for edge ${edge.id}`);
+      return;
+    }
+    
+    // Add debugging output for specific paper-organization edges (limit to first few)
+    if (edgeStats.total < 10 && 
+        ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+         (sourceNode.type === 'organization' && targetNode.type === 'paper'))) {
+      console.log(`DEBUG Edge ${edge.id}: ${sourceNode.type}(${edge.source}) -> ${targetNode.type}(${edge.target})`);
+    }
+    
+    // Check if this is a paper-author connection
+    if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
+        (sourceNode.type === 'author' && targetNode.type === 'paper')) {
+      
+      edgeStats.paperAuthor++;
+      // Use author color for the edge
+      const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
+      edge.color = authorNode.color;
+      
+      // Debug for a few edges
+      if (edgeStats.paperAuthor < 5) {
+        console.log(`Paper-Author edge ${edge.id}: Using author color ${edge.color}`);
+      }
+    }
+    // Check if this is a paper-organization connection
+    else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+             (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
+      
+      edgeStats.paperOrg++;
+      // Use paper color for the edge
+      const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
+      const orgNode = sourceNode.type === 'organization' ? sourceNode : targetNode;
+      
+      // Debug every paper-org edge to verify correct mapping
+      console.log(`Paper-Org edge ${edge.id}: Paper=${paperNode.type}(${edge.source === paperNode.id ? 'source' : 'target'}) color=${paperNode.color}, Org=${orgNode.type}(${edge.source === orgNode.id ? 'source' : 'target'}) color=${orgNode.color}`);
+      
+      // EXPLICITLY SET COLOR - Make very clear what we're setting
+      const oldColor = edge.color;
+      edge.color = paperNode.color;
+      
+      console.log(`  Set edge ${edge.id} color: ${oldColor} -> ${edge.color}`);
+    }
+    // For any other connection types
+    else {
+      edgeStats.other++;
+      // Default to target color for all other connection types
+      edge.color = targetNode.color;
+      
+      // Debug for a few "other" edges
+      if (edgeStats.other < 5) {
+        console.log(`Other edge ${edge.id}: Using target color ${edge.color}`);
+      }
     }
   });
   
+  // Force the refresh to apply changes
   sigmaInstance.refresh();
-  console.log("Edge colors have been forcibly updated");
+  
+  console.log("Edge coloring stats:", edgeStats);
+  console.log("Edge colors have been updated based on connection types");
+  
+  // Add debug check after redraw to verify edge colors
+  setTimeout(() => {
+    console.log("Verifying edge colors after redraw:");
+    let colorCount = {};
+    sigmaInstance.iterEdges(function(edge) {
+      if (!colorCount[edge.color]) {
+        colorCount[edge.color] = 0;
+      }
+      colorCount[edge.color]++;
+    });
+    console.log("Edge color counts:", colorCount);
+  }, 100);
 }
 
 // Log node colors for debugging
@@ -104,6 +192,70 @@ function forceNodeColorsFromConfig() {
   console.log("Node colors have been forcibly applied from config");
 }
 
+// Debug function to check paper-organization edge coloring
+function debugPaperOrgEdges() {
+  console.log("Debugging paper-organization edge coloring");
+  
+  // Create a map of node IDs to node info for faster lookup
+  let nodeInfo = {};
+  sigmaInstance.iterNodes(function(node) {
+    nodeInfo[node.id] = {
+      color: node.color || '#aaa',
+      type: node.type || 'unknown',
+      label: node.label || node.id
+    };
+  });
+  
+  // Find and log all paper-organization edges
+  let paperOrgEdges = [];
+  sigmaInstance.iterEdges(function(edge) {
+    const sourceNode = nodeInfo[edge.source];
+    const targetNode = nodeInfo[edge.target];
+    
+    if (!sourceNode || !targetNode) return;
+    
+    // Check if this is a paper-organization connection
+    if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+        (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
+      
+      const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
+      const orgNode = sourceNode.type === 'organization' ? sourceNode : targetNode;
+      
+      paperOrgEdges.push({
+        edgeId: edge.id,
+        edgeColor: edge.color,
+        paperNodeId: paperNode.id,
+        paperNodeLabel: paperNode.label,
+        paperNodeColor: paperNode.color,
+        orgNodeId: orgNode.id,
+        orgNodeLabel: orgNode.label,
+        orgNodeColor: orgNode.color,
+        edgeSourceIsOrg: sourceNode.type === 'organization'
+      });
+    }
+  });
+  
+  console.log(`Found ${paperOrgEdges.length} paper-organization edges`);
+  console.log("Sample of paper-organization edges:", paperOrgEdges.slice(0, 5));
+  
+  // Check if edges are colored correctly (should match paper color)
+  let correctlyColored = 0;
+  let incorrectlyColored = 0;
+  
+  for (const edge of paperOrgEdges) {
+    if (edge.edgeColor === edge.paperNodeColor) {
+      correctlyColored++;
+    } else {
+      incorrectlyColored++;
+      console.log(`Incorrectly colored edge: ${edge.edgeId} (color: ${edge.edgeColor}, should be: ${edge.paperNodeColor})`);
+    }
+  }
+  
+  console.log(`Edge coloring stats: ${correctlyColored} correct, ${incorrectlyColored} incorrect`);
+  
+  return paperOrgEdges;
+}
+
 // Initialize the graph with the loaded data
 function initializeGraph(data) {
   graph = data;
@@ -141,18 +293,48 @@ function initializeGraph(data) {
     for (let i = 0; i < graph.edges.length; i++) {
       let edge = graph.edges[i];
       
-      // Find target node to match its color
-      let targetNodeColor = '#aaa';
+      // Get source and target node info to determine edge color
+      let sourceNode = null;
+      let targetNode = null;
+      let edgeColor = '#aaa';
+      
       sigmaInstance.iterNodes(function(node) {
-        if (node.id == edge.target) {
-          targetNodeColor = node.color;
-          console.log(`Setting edge ${edge.id} color to match target node ${node.id}: ${targetNodeColor}`);
+        if (node.id === edge.source) {
+          sourceNode = {
+            type: node.type || 'unknown',
+            color: node.color || '#aaa'
+          };
+        }
+        if (node.id === edge.target) {
+          targetNode = {
+            type: node.type || 'unknown',
+            color: node.color || '#aaa'
+          };
         }
       });
       
+      if (sourceNode && targetNode) {
+        // Paper-Author connection: use author color
+        if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
+            (sourceNode.type === 'author' && targetNode.type === 'paper')) {
+          const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
+          edgeColor = authorNode.color;
+        }
+        // Paper-Organization connection: use paper color
+        else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+                 (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
+          const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
+          edgeColor = paperNode.color;
+        }
+        // Default to target color for all other connections
+        else {
+          edgeColor = targetNode.color;
+        }
+      }
+      
       sigmaInstance.addEdge(edge.id, edge.source, edge.target, {
         size: edge.size || 1,
-        color: targetNodeColor
+        color: edgeColor
       });
     }
     
@@ -168,8 +350,8 @@ function initializeGraph(data) {
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
       defaultNodeHoverColor: '#fff',
-      edgeColor: 'target',  // This tells sigma to use target node color for edges
-      defaultEdgeColor: '#f00'  // Set a default that's noticeable so we can see if our explicit coloring fails
+      edgeColor: 'default',  // Use our custom edge colors instead of target node colors
+      defaultEdgeColor: '#ccc'  // Default color for edges without explicit colors
     });
     
     // Configure graph properties
@@ -189,6 +371,12 @@ function initializeGraph(data) {
     
     // Force edge colors again after applying node colors
     forceEdgeColors();
+    
+    // Add debug call to check paper-organization edges
+    setTimeout(() => {
+      console.log("Running edge coloring debug check");
+      debugPaperOrgEdges();
+    }, 2000);
     
     console.log("Sigma instance created and configured:", sigmaInstance);
     
@@ -226,13 +414,39 @@ function applyNodeStyles() {
       }
     });
     
-    // Then update edge colors to match their target nodes
+    // Update edge colors following the custom logic
+    // Create a map of node IDs to node info for faster lookup
+    let nodeInfo = {};
+    sigmaInstance.iterNodes(function(node) {
+      nodeInfo[node.id] = {
+        color: node.color || '#aaa',
+        type: node.type || 'unknown'
+      };
+    });
+    
+    // Apply the custom edge coloring rules
     sigmaInstance.iterEdges(function(edge) {
-      sigmaInstance.iterNodes(function(node) {
-        if (node.id == edge.target) {
-          edge.color = node.color;
-        }
-      });
+      const sourceNode = nodeInfo[edge.source];
+      const targetNode = nodeInfo[edge.target];
+      
+      if (!sourceNode || !targetNode) return;
+      
+      // Paper-Author connection: use author color
+      if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
+          (sourceNode.type === 'author' && targetNode.type === 'paper')) {
+        const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
+        edge.color = authorNode.color;
+      }
+      // Paper-Organization connection: use paper color
+      else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+               (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
+        const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
+        edge.color = paperNode.color;
+      }
+      // Default to target color for all other connection types
+      else {
+        edge.color = targetNode.color;
+      }
     });
     
     sigmaInstance.refresh();
@@ -275,14 +489,41 @@ function colorNodesByAttribute(attribute) {
     n.color = valueColors[value];
   });
   
-  // Update edge colors to match their target nodes
+  // Create a map of node IDs to node info for faster lookup
+  let nodeInfo = {};
+  sigmaInstance.iterNodes(function(node) {
+    nodeInfo[node.id] = {
+      color: node.color || '#aaa',
+      type: node.type || 'unknown'
+    };
+  });
+  
+  // Apply the custom edge coloring rules
   sigmaInstance.iterEdges(function(edge) {
-    sigmaInstance.iterNodes(function(node) {
-      if (node.id == edge.target) {
-        edge.originalColor = node.color;
-        edge.color = node.color;
-      }
-    });
+    const sourceNode = nodeInfo[edge.source];
+    const targetNode = nodeInfo[edge.target];
+    
+    if (!sourceNode || !targetNode) return;
+    
+    // Paper-Author connection: use author color
+    if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
+        (sourceNode.type === 'author' && targetNode.type === 'paper')) {
+      const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
+      edge.originalColor = authorNode.color;
+      edge.color = authorNode.color;
+    }
+    // Paper-Organization connection: use paper color
+    else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
+             (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
+      const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
+      edge.originalColor = paperNode.color;
+      edge.color = paperNode.color;
+    }
+    // Default to target color for all other connection types
+    else {
+      edge.originalColor = targetNode.color;
+      edge.color = targetNode.color;
+    }
   });
   
   sigmaInstance.refresh();
@@ -312,15 +553,25 @@ function nodeActive(nodeId) {
   sigmaInstance.detail = true;
   selectedNode = node;
   
-  // Find neighbors
+  // Create a map of node IDs to node info for faster lookup
+  let nodeInfo = {};
+  sigmaInstance.iterNodes(function(n) {
+    nodeInfo[n.id] = {
+      color: n.color || '#aaa',
+      type: n.type || 'unknown'
+    };
+  });
+  
+  // Find neighbors and store original edge colors
   var neighbors = {};
   sigmaInstance.iterEdges(function(e) {
     if (e.source == nodeId || e.target == nodeId) {
       neighbors[e.source == nodeId ? e.target : e.source] = {
         name: e.label || "",
+        type: e.source == nodeId ? nodeInfo[e.target].type : nodeInfo[e.source].type,
         color: e.color
       };
-      // Keep edges connected to this node colored as they were
+      // Keep track of original edge color
       e.originalColor = e.color;
     }
   });

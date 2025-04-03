@@ -590,4 +590,24 @@ canvas#sigma_bg_1 {
 #debug-controls, 
 #config-debug {
   display: none !important;
+}
+
+/* Edge color toggle styles */
+.toggle-wrapper {
+  margin-top: 8px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+#edge-settings h2 {
+  margin-bottom: 10px;
 } 
