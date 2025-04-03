@@ -31,6 +31,12 @@ $(document).ready(function() {
     document.title = config.text.title || 'Daily Paper Atlas';
     $('#title').text(config.text.title || 'Daily Paper Atlas');
     $('#titletext').text(config.text.intro || '');
+    
+    // Update the path to load data from the data folder
+    if (config.data && !config.data.startsWith('data/')) {
+      config.data = 'data/' + config.data;
+    }
+    
     loadGraph();
   }).fail(function(jqXHR, textStatus, errorThrown) {
     console.error("Failed to load config:", textStatus, errorThrown);

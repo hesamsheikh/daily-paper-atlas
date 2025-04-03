@@ -1,6 +1,6 @@
-# Daily Paper Atlas
+# Daily Papers Atlas
 
-A visualization tool for exploring papers and authors network graphs, inspired by the [Model Atlas](https://arxiv.org/abs/2503.10633) paper.
+The atlas visualization demo of the daily papers listed in [Hugging Face Daily Papers](https://huggingface.co/papers). 
 
 ## Features
 
@@ -11,21 +11,51 @@ A visualization tool for exploring papers and authors network graphs, inspired b
 - Node details panel
 - Responsive zoom and navigation
 
-## Setup
+## Project Structure
 
-1. Convert your GRAPHML file to JSON format:
+- `data/` - Contains all data files and conversion scripts
+  - `graph.graphml` - Source GraphML file
+  - `graph.json` - Intermediate JSON format
+  - `sigma_graph.json` - SigmaJS-compatible JSON
+  - `paper_atlas_data.json` - Additional data
+  - `paper_atlas_data.json.gz` - Compressed data
+  - `graphml_to_json.py` - GraphML to JSON converter
+  - `json_converter.js` - JSON format converter
+  - `check_json.py` - JSON validation script
+- `js/` - JavaScript files
+- `css/` - CSS stylesheets
+- `config.json` - Application configuration
+- `index.html` - Main application page
+- `app.py` - Simple web server
+
+## Setup and Running the Application
+
+### Data Conversion
+
+If you need to convert a GraphML file to JSON:
 
 ```bash
-python graphml_to_json.py graph.graphml paper_atlas_data.json paper_atlas_data.json.gz
+# Convert GraphML to JSON
+python data/graphml_to_json.py data/graph.graphml data/paper_atlas_data.json data/paper_atlas_data.json.gz
 ```
 
-2. Start the web server:
+To convert the intermediate JSON to SigmaJS format:
 
 ```bash
+# Convert to SigmaJS format
+node data/json_converter.js
+```
+
+### Running the Application
+
+Start the local web server:
+
+```bash
+# Start the web server
 python app.py
 ```
 
-3. Open your browser to http://localhost:7860
+Then open your browser to http://localhost:7860
 
 ## Technology Stack
 
@@ -37,13 +67,16 @@ python app.py
 
 ## Data Format
 
-The application expects a GraphML file that will be converted to a JSON format suitable for SigmaJS. The GraphML file should include node attributes like:
-- label
-- type (e.g., "author", "paper")
-- x, y (coordinates for positioning)
-- size
-- r, g, b (color values)
+The data is exported from [Gephi](https://gephi.org/) in the GraphML/JSON format.
+
+## Configuration
+
+The `config.json` file controls various aspects of the visualization:
+- Data source path
+- Node colors and sizes
+- UI text and labels
+- Sigma.js visualization settings
 
 ## Credits
 
-This visualization is inspired by the work described in ["Charting and Navigating Hugging Face's Model Atlas"](https://arxiv.org/abs/2503.10633) by Eliahu Horwitz, Nitzan Kurer, Jonathan Kahana, Liel Amar, and Yedid Hoshen. 
+This visualization is inspired by the work described in ["Charting and Navigating Hugging Face's Model Atlas"](https://arxiv.org/abs/2503.10633). 

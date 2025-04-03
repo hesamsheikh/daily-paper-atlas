@@ -10,13 +10,13 @@ const fs = require('fs');
 const path = require('path');
 
 // File paths
-const sourcePath = 'graph.json';
-const outputPath = 'sigma_graph.json';
+const sourcePath = path.join(__dirname, 'graph.json');
+const outputPath = path.join(__dirname, 'sigma_graph.json');
 
 // Load config to access node type colors
 let config;
 try {
-  config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+  config = JSON.parse(fs.readFileSync(path.join(__dirname, '../config.json'), 'utf8'));
 } catch (error) {
   console.error('Error loading config.json:', error);
   config = {
