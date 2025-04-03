@@ -5,12 +5,12 @@
   "logo": {
     "file": "",
     "link": "",
-    "text": "🤗 Daily Papers Atlas"
+    "text": "Daily Papers Atlas"
   },
   "text": {
     "more": "<p><strong>About:</strong> This visualization represents a network of research papers and authors, showing connections and relationships between them. The network is based on the graph.graphml file and converted to a format suitable for web visualization.</p>",
     "intro": "A demo network of the top research papers in Machine Learning featured in <a href='https://huggingface.co/papers' target='_blank'>Hugging Face Daily Papers</a>.<br>The full report and project: <a href='https://github.com/hesamsheikh/daily-papers-analysis' target='_blank'>GitHub</a>",
-    "title": "🤗 Daily Papers Atlas"
+    "title": "Daily Papers Atlas"
   },
   "legend": {
     "edgeLabel": "Connection",

@@ -28,8 +28,8 @@ $(document).ready(function() {
   $.getJSON('config.json', function(data) {
     console.log("Configuration loaded:", data);
     config = data;
-    document.title = config.text.title || '🤗 Daily Papers Atlas';
-    $('#title').text(config.text.title || '🤗 Daily Papers Atlas');
+    document.title = config.text.title || 'Daily Papers Atlas';
+    $('#title').text(config.text.title || 'Daily Papers Atlas');
     
     // Don't modify the intro text at all - using hardcoded HTML
     
