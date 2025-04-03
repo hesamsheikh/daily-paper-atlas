@@ -1,114 +1,102 @@
 // Force edge colors to match their target nodes
 function forceEdgeColors() {
-  console.log("Forcibly updating edge colors based on connection type");
+  if (!sigmaInstance) return;
   
   // Create a map of node IDs to node info for faster lookup
   let nodeInfo = {};
-  let typeCounts = { paper: 0, author: 0, organization: 0, unknown: 0 };
+  let nodeTypeCount = { paper: 0, author: 0, organization: 0, unknown: 0 };
   
   sigmaInstance.iterNodes(function(node) {
-    // Make sure node type is properly set
-    let nodeType = node.type || 'unknown';
-    typeCounts[nodeType] = (typeCounts[nodeType] || 0) + 1;
+    // Log a few nodes to verify their properties
+    if (nodeTypeCount[node.type || 'unknown'] < 3) {
+      console.log(`Node ${node.id}: type=${node.type}, color=${node.color}`);
+    }
+    nodeTypeCount[node.type || 'unknown']++;
     
     nodeInfo[node.id] = {
       color: node.color || '#aaa',
-      type: nodeType
+      type: node.type || 'unknown'
     };
   });
   
-  console.log("Node type counts:", typeCounts);
+  console.log("Node type counts:", nodeTypeCount);
   
-  // Track edge coloring statistics
-  let edgeStats = {
-    total: 0,
+  let edgeTypeCount = {
     paperAuthor: 0,
     paperOrg: 0,
     other: 0
   };
   
-  // Update all edge colors based on connection type
+  // First pass: determine colors
+  let edgeColors = {};
   sigmaInstance.iterEdges(function(edge) {
-    edgeStats.total++;
-    
     const sourceNode = nodeInfo[edge.source];
     const targetNode = nodeInfo[edge.target];
     
     if (!sourceNode || !targetNode) {
-      console.log(`Could not find node info for edge ${edge.id}`);
+      console.log(`Missing node info for edge ${edge.id}: source=${edge.source}, target=${edge.target}`);
       return;
     }
     
-    // Add debugging output for specific paper-organization edges (limit to first few)
-    if (edgeStats.total < 10 && 
-        ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
-         (sourceNode.type === 'organization' && targetNode.type === 'paper'))) {
-      console.log(`DEBUG Edge ${edge.id}: ${sourceNode.type}(${edge.source}) -> ${targetNode.type}(${edge.target})`);
-    }
+    let newColor;
+    let edgeType = '';
     
     // Check if this is a paper-author connection
     if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
         (sourceNode.type === 'author' && targetNode.type === 'paper')) {
-      
-      edgeStats.paperAuthor++;
+      edgeTypeCount.paperAuthor++;
       // Use author color for the edge
       const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
-      edge.color = authorNode.color;
-      
-      // Debug for a few edges
-      if (edgeStats.paperAuthor < 5) {
-        console.log(`Paper-Author edge ${edge.id}: Using author color ${edge.color}`);
-      }
+      newColor = authorNode.color;
+      edgeType = 'paper-author';
     }
     // Check if this is a paper-organization connection
     else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
              (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
-      
-      edgeStats.paperOrg++;
+      edgeTypeCount.paperOrg++;
       // Use paper color for the edge
       const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
-      const orgNode = sourceNode.type === 'organization' ? sourceNode : targetNode;
-      
-      // Debug every paper-org edge to verify correct mapping
-      console.log(`Paper-Org edge ${edge.id}: Paper=${paperNode.type}(${edge.source === paperNode.id ? 'source' : 'target'}) color=${paperNode.color}, Org=${orgNode.type}(${edge.source === orgNode.id ? 'source' : 'target'}) color=${orgNode.color}`);
-      
-      // EXPLICITLY SET COLOR - Make very clear what we're setting
-      const oldColor = edge.color;
-      edge.color = paperNode.color;
-      
-      console.log(`  Set edge ${edge.id} color: ${oldColor} -> ${edge.color}`);
+      newColor = paperNode.color;
+      edgeType = 'paper-org';
     }
     // For any other connection types
     else {
-      edgeStats.other++;
-      // Default to target color for all other connection types
-      edge.color = targetNode.color;
+      edgeTypeCount.other++;
+      // Default to source color for all other connection types
+      newColor = sourceNode.color;
+      edgeType = 'other';
+    }
+    
+    // Store the color to apply in the second pass
+    edgeColors[edge.id] = {
+      color: newColor,
+      type: edgeType
+    };
+  });
+  
+  // Second pass: apply colors
+  sigmaInstance.iterEdges(function(edge) {
+    if (edgeColors[edge.id]) {
+      const colorInfo = edgeColors[edge.id];
+      edge.color = colorInfo.color;
       
-      // Debug for a few "other" edges
-      if (edgeStats.other < 5) {
-        console.log(`Other edge ${edge.id}: Using target color ${edge.color}`);
+      // Log a few edges of each type to verify coloring
+      if (edgeTypeCount[colorInfo.type === 'paper-author' ? 'paperAuthor' : 
+                       colorInfo.type === 'paper-org' ? 'paperOrg' : 'other'] <= 3) {
+        console.log(`Edge ${edge.id} (${colorInfo.type}): color=${colorInfo.color}`);
       }
     }
   });
   
-  // Force the refresh to apply changes
-  sigmaInstance.refresh();
+  console.log("Edge type counts:", edgeTypeCount);
   
-  console.log("Edge coloring stats:", edgeStats);
-  console.log("Edge colors have been updated based on connection types");
+  // Force a complete redraw to ensure colors are applied
+  sigmaInstance.draw();
   
-  // Add debug check after redraw to verify edge colors
+  // Additional refresh to ensure changes are visible
   setTimeout(() => {
-    console.log("Verifying edge colors after redraw:");
-    let colorCount = {};
-    sigmaInstance.iterEdges(function(edge) {
-      if (!colorCount[edge.color]) {
-        colorCount[edge.color] = 0;
-      }
-      colorCount[edge.color]++;
-    });
-    console.log("Edge color counts:", colorCount);
-  }, 100);
+    sigmaInstance.refresh();
+  }, 50);
 }
 
 // Log node colors for debugging
@@ -273,68 +261,48 @@ function initializeGraph(data) {
       mouseInertia: 0.8
     });
     
-    console.log("Sigma mouse properties configured");
-    
-    // Add nodes and edges to sigma
+    // Add nodes to sigma
     for (let i = 0; i < graph.nodes.length; i++) {
       let node = graph.nodes[i];
+      
+      // Ensure node type is set
+      if (!node.type && node.id) {
+        const idParts = node.id.split('_');
+        if (idParts.length >= 2) {
+          node.type = idParts[0];  // Extract type from ID (e.g., "paper_123" -> "paper")
+        }
+      }
+      
+      // Get color from config based on node type
+      let nodeColor;
+      if (node.type && config.nodeTypes && config.nodeTypes[node.type]) {
+        nodeColor = config.nodeTypes[node.type].color;
+      } else if (node.type && nodeTypes[node.type]) {
+        nodeColor = nodeTypes[node.type].color;
+      } else {
+        nodeColor = '#666';
+      }
+      
+      // Log node info for debugging
+      if (i < 5) {
+        console.log(`Adding node: id=${node.id}, type=${node.type}, color=${nodeColor}`);
+      }
+      
       sigmaInstance.addNode(node.id, {
         label: node.label || node.id,
         x: node.x || Math.random() * 100,
         y: node.y || Math.random() * 100,
         size: node.size || 1,
-        color: node.color || (node.type && config.nodeTypes && config.nodeTypes[node.type] ? 
-                  config.nodeTypes[node.type].color : nodeTypes[node.type]?.color || '#666'),
+        color: nodeColor,
         type: node.type
       });
     }
     
-    // First add all nodes, then add edges with colors matching their target nodes
+    // First add all nodes, then add edges
     for (let i = 0; i < graph.edges.length; i++) {
       let edge = graph.edges[i];
-      
-      // Get source and target node info to determine edge color
-      let sourceNode = null;
-      let targetNode = null;
-      let edgeColor = '#aaa';
-      
-      sigmaInstance.iterNodes(function(node) {
-        if (node.id === edge.source) {
-          sourceNode = {
-            type: node.type || 'unknown',
-            color: node.color || '#aaa'
-          };
-        }
-        if (node.id === edge.target) {
-          targetNode = {
-            type: node.type || 'unknown',
-            color: node.color || '#aaa'
-          };
-        }
-      });
-      
-      if (sourceNode && targetNode) {
-        // Paper-Author connection: use author color
-        if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
-            (sourceNode.type === 'author' && targetNode.type === 'paper')) {
-          const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
-          edgeColor = authorNode.color;
-        }
-        // Paper-Organization connection: use paper color
-        else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
-                 (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
-          const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
-          edgeColor = paperNode.color;
-        }
-        // Default to target color for all other connections
-        else {
-          edgeColor = targetNode.color;
-        }
-      }
-      
       sigmaInstance.addEdge(edge.id, edge.source, edge.target, {
-        size: edge.size || 1,
-        color: edgeColor
+        size: edge.size || 1
       });
     }
     
@@ -350,8 +318,10 @@ function initializeGraph(data) {
       nodeBorderColor: '#fff',
       defaultNodeBorderColor: '#fff',
       defaultNodeHoverColor: '#fff',
-      edgeColor: 'default',  // Use our custom edge colors instead of target node colors
-      defaultEdgeColor: '#ccc'  // Default color for edges without explicit colors
+      edgeColor: 'source',  // Use source node colors by default, will be overridden by our custom colors
+      defaultEdgeColor: '#ccc',  // Only used if no color is set
+      minEdgeSize: 0.5,
+      maxEdgeSize: 2
     });
     
     // Configure graph properties
@@ -364,26 +334,15 @@ function initializeGraph(data) {
     });
     
     // Force redraw and refresh
-    sigmaInstance.draw(2, 2, 2, 2);
+    sigmaInstance.draw();
     
     // Force apply node colors from config to override any hardcoded colors in the data
     forceNodeColorsFromConfig();
     
-    // Force edge colors again after applying node colors
-    forceEdgeColors();
-    
-    // Add debug call to check paper-organization edges
-    setTimeout(() => {
-      console.log("Running edge coloring debug check");
-      debugPaperOrgEdges();
-    }, 2000);
-    
-    console.log("Sigma instance created and configured:", sigmaInstance);
-    
     // Initialize node colors and sizes by type
     applyNodeStyles();
     
-    // Force edge colors again after applyNodeStyles
+    // Force edge colors one final time to ensure proper coloring
     forceEdgeColors();
     
     // Initialize filtering
@@ -414,42 +373,11 @@ function applyNodeStyles() {
       }
     });
     
-    // Update edge colors following the custom logic
-    // Create a map of node IDs to node info for faster lookup
-    let nodeInfo = {};
-    sigmaInstance.iterNodes(function(node) {
-      nodeInfo[node.id] = {
-        color: node.color || '#aaa',
-        type: node.type || 'unknown'
-      };
-    });
+    // Force a redraw to ensure node colors are applied
+    sigmaInstance.draw(2, 2, 2, 2);
     
-    // Apply the custom edge coloring rules
-    sigmaInstance.iterEdges(function(edge) {
-      const sourceNode = nodeInfo[edge.source];
-      const targetNode = nodeInfo[edge.target];
-      
-      if (!sourceNode || !targetNode) return;
-      
-      // Paper-Author connection: use author color
-      if ((sourceNode.type === 'paper' && targetNode.type === 'author') ||
-          (sourceNode.type === 'author' && targetNode.type === 'paper')) {
-        const authorNode = sourceNode.type === 'author' ? sourceNode : targetNode;
-        edge.color = authorNode.color;
-      }
-      // Paper-Organization connection: use paper color
-      else if ((sourceNode.type === 'paper' && targetNode.type === 'organization') ||
-               (sourceNode.type === 'organization' && targetNode.type === 'paper')) {
-        const paperNode = sourceNode.type === 'paper' ? sourceNode : targetNode;
-        edge.color = paperNode.color;
-      }
-      // Default to target color for all other connection types
-      else {
-        edge.color = targetNode.color;
-      }
-    });
-    
-    sigmaInstance.refresh();
+    // Now update edge colors using forceEdgeColors
+    forceEdgeColors();
   } catch (e) {
     console.error("Error applying node styles:", e);
   }
@@ -534,8 +462,6 @@ function colorNodesByAttribute(attribute) {
 
 // Display node details (used when a node is clicked)
 function nodeActive(nodeId) {
-  console.log("nodeActive called with id:", nodeId);
-  
   // Find the node
   var node = null;
   sigmaInstance.iterNodes(function(n) {
@@ -549,7 +475,6 @@ function nodeActive(nodeId) {
     return;
   }
   
-  console.log("Node found:", node);
   sigmaInstance.detail = true;
   selectedNode = node;
   
@@ -575,8 +500,6 @@ function nodeActive(nodeId) {
       e.originalColor = e.color;
     }
   });
-  
-  console.log("Neighbors found:", Object.keys(neighbors).length);
   
   // Update node appearance
   sigmaInstance.iterNodes(function(n) {
@@ -622,7 +545,6 @@ function nodeActive(nodeId) {
   
   // Show node details panel
   try {
-    console.log("Displaying attribute pane");
     // Make absolutely sure the panel is visible with both CSS approaches
     $('#attributepane').show().css('display', 'block');
     
@@ -652,8 +574,6 @@ function nodeActive(nodeId) {
       var id = $(this).data('node-id');
       nodeActive(id);
     });
-    
-    console.log("Attribute pane updated with node details");
   } catch (e) {
     console.error("Error updating attribute pane:", e);
   }
@@ -661,7 +581,6 @@ function nodeActive(nodeId) {
 
 // Reset display (used when clicking outside nodes or closing the panel)
 function nodeNormal() {
-  console.log("nodeNormal called");
   if (sigmaInstance) {
     sigmaInstance.detail = false;
     selectedNode = null;
@@ -684,7 +603,9 @@ function nodeNormal() {
     
     // Hide panel and refresh display
     $('#attributepane').css('display', 'none');
-    sigmaInstance.refresh();
+    
+    // Force a complete redraw to ensure colors are properly applied
+    sigmaInstance.draw(2, 2, 2, 2).refresh();
     
     // Force edge colors to ensure they're correct after reset
     forceEdgeColors();

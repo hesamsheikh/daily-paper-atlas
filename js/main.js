@@ -516,7 +516,7 @@ function nodeActive(nodeId) {
     // First, ensure we store the original color (only once)
     if (typeof e.attr.originalColor === 'undefined') {
       e.attr.originalColor = e.color;
-      console.log("Storing original color for edge:", e.id, "Color:", e.color);
+      // console.log("Storing original color for edge:", e.id, "Color:", e.color);
     }
     
     // Store original size for edges (only once)
@@ -560,7 +560,7 @@ function nodeActive(nodeId) {
       const sizeFactor = config.highlighting?.highlightedEdgeSizeFactor ?? 2;
       e.size = (e.attr.originalSize) * sizeFactor;
       // Don't change the color property at all - preserve exactly as is
-      console.log("Edge connected to selected node:", e.id, "Source:", sourceId, "Target:", targetId, "Keeping original color");
+      // console.log("Edge connected to selected node:", e.id, "Source:", sourceId, "Target:", targetId, "Keeping original color");
     } else {
       // For non-connected edges, use a very light gray that's almost invisible
       // RGBA doesn't seem to work consistently in Sigma.js v0.1
