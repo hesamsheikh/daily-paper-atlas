@@ -556,4 +556,10 @@ canvas#sigma_bg_1 {
   margin-bottom: 12px;
   font-size: 13px;
   display: block;
+}
+
+/* Hide debug controls */
+#debug-controls, 
+#config-debug {
+  display: none !important;
 } 

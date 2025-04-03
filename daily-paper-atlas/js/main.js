@@ -23,6 +23,87 @@ function forceEdgeColors() {
   console.log("Edge colors have been forcibly updated");
 }
 
+// Log node colors for debugging
+function logNodeColors() {
+  if (!sigmaInstance) return;
+  
+  console.log("Current node colors by type:");
+  let typeColors = {};
+  
+  // Collect colors for each node type
+  sigmaInstance.iterNodes(function(node) {
+    if (node.type) {
+      if (!typeColors[node.type]) {
+        typeColors[node.type] = {
+          configColor: (config.nodeTypes && config.nodeTypes[node.type]) 
+                        ? config.nodeTypes[node.type].color 
+                        : (nodeTypes[node.type] ? nodeTypes[node.type].color : 'none'),
+          nodeCount: 0,
+          colorCounts: {}
+        };
+      }
+      
+      typeColors[node.type].nodeCount++;
+      
+      if (!typeColors[node.type].colorCounts[node.color]) {
+        typeColors[node.type].colorCounts[node.color] = 0;
+      }
+      typeColors[node.type].colorCounts[node.color]++;
+    }
+  });
+  
+  // Log the results
+  for (const type in typeColors) {
+    console.log(`Node type: ${type}`);
+    console.log(`  Config color: ${typeColors[type].configColor}`);
+    console.log(`  Node count: ${typeColors[type].nodeCount}`);
+    console.log('  Actual colors used:');
+    for (const color in typeColors[type].colorCounts) {
+      console.log(`    ${color}: ${typeColors[type].colorCounts[color]} nodes`);
+    }
+  }
+}
+
+// Force apply node colors from config, overriding any colors in the data
+function forceNodeColorsFromConfig() {
+  console.log("Forcibly applying node colors from config settings");
+  
+  if (!sigmaInstance) {
+    console.error("Cannot apply node colors, sigma instance not initialized");
+    return;
+  }
+  
+  // Use configured node types with fallback to default types
+  let configNodeTypes = config.nodeTypes || nodeTypes;
+  
+  // Apply colors to all nodes based on their type
+  sigmaInstance.iterNodes(function(node) {
+    if (node.type && configNodeTypes[node.type]) {
+      // Override the node color with the one from config
+      const configColor = configNodeTypes[node.type].color;
+      console.log(`Setting node ${node.id} color to ${configColor} based on type ${node.type}`);
+      node.color = configColor;
+      
+      // Also set size if configured
+      if (configNodeTypes[node.type].size) {
+        node.size = configNodeTypes[node.type].size;
+      }
+    }
+  });
+  
+  // Refresh the display
+  sigmaInstance.refresh();
+  
+  // Also update edge colors to match their target nodes
+  setTimeout(function() {
+    forceEdgeColors();
+    // Log node colors after setting them for verification
+    logNodeColors();
+  }, 100);
+  
+  console.log("Node colors have been forcibly applied from config");
+}
+
 // Initialize the graph with the loaded data
 function initializeGraph(data) {
   graph = data;
@@ -103,7 +184,10 @@ function initializeGraph(data) {
     // Force redraw and refresh
     sigmaInstance.draw(2, 2, 2, 2);
     
-    // Force edge colors one more time after drawing
+    // Force apply node colors from config to override any hardcoded colors in the data
+    forceNodeColorsFromConfig();
+    
+    // Force edge colors again after applying node colors
     forceEdgeColors();
     
     console.log("Sigma instance created and configured:", sigmaInstance);
@@ -130,10 +214,13 @@ function applyNodeStyles() {
   try {
     // First update node colors
     sigmaInstance.iterNodes(function(node) {
+      // Always use config colors for node types, ignoring any existing colors
       if (node.type && config.nodeTypes && config.nodeTypes[node.type]) {
+        // Override with config color (even if node already has a color)
         node.color = config.nodeTypes[node.type].color;
         node.size = config.nodeTypes[node.type].size;
       } else if (node.type && nodeTypes[node.type]) {
+        // Fallback to default colors
         node.color = nodeTypes[node.type].color;
         node.size = nodeTypes[node.type].size;
       }

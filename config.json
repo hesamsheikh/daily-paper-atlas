@@ -1,7 +1,7 @@
 {
   "type": "network",
   "version": "1.0",
-  "data": "paper_atlas_data.json",
+  "data": "sigma_graph.json",
   "logo": {
     "file": "",
     "link": "",
@@ -54,10 +54,10 @@
       "defaultLabelSize": 14
     },
     "graphProperties": {
-      "maxEdgeSize": 2,
-      "minEdgeSize": 0.5,
-      "minNodeSize": 2,
-      "maxNodeSize": 10
+      "maxEdgeSize": 1.5,
+      "minEdgeSize": 0.2,
+      "minNodeSize": 1,
+      "maxNodeSize": 8
     },
     "mouseProperties": {
       "maxRatio": 20,
@@ -65,13 +65,13 @@
     }
   },
   "nodeTypes": {
-    "paper": { "color": "#2ca02c", "size": 3 },
-    "author": { "color": "#9467bd", "size": 5 },
-    "organization": { "color": "#1f77b4", "size": 4 },
+    "paper": { "color": "#FF009A", "size": 1 },
+    "author": { "color": "#62D600", "size": 1 },
+    "organization": { "color": "#020AA7", "size": 1 },
     "unknown": { "color": "#ff7f0e", "size": 3 }
   },
   "colorPalette": [
-    "#9467bd", "#2ca02c", "#1f77b4", "#17becf", 
+    "#FF9A00", "#62D600", "#020AA7", "#17becf", 
     "#ff7f0e", "#d62728", "#8c564b", "#e377c2", 
     "#bcbd22", "#7f7f7f"
   ]
