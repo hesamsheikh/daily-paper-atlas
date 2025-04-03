@@ -181,6 +181,22 @@ canvas#sigma_bg_1 {
   list-style: none;
 }
 
+#attributepane .link li.connection-type-header {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 3px;
+}
+
+#attributepane .link li a {
+  text-decoration: none;
+}
+
+#attributepane .link li a:hover {
+  text-decoration: underline;
+}
+
 #attributepane .p {
   padding-top: 10px;
   font-weight: bold;

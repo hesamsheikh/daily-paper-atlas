@@ -163,6 +163,16 @@ function initializeGraph(data) {
     console.log("Adding nodes to sigma instance...");
     for (let i = 0; i < graph.nodes.length; i++) {
       let node = graph.nodes[i];
+      
+      // Try to detect node type if not already set
+      if (!node.type && node.id && node.id.includes('_')) {
+        const idParts = node.id.split('_');
+        if (idParts.length >= 2 && ['paper', 'author', 'organization'].includes(idParts[0])) {
+          node.type = idParts[0];
+          console.log(`Detected type from ID: ${node.id} → ${node.type}`);
+        }
+      }
+      
       let nodeColor = node.color || (node.type && config.nodeTypes && config.nodeTypes[node.type] ? 
                       config.nodeTypes[node.type].color : nodeTypes[node.type]?.color || '#666');
       
@@ -421,6 +431,14 @@ function nodeActive(nodeId) {
     return;
   }
   
+  // Debug: Log the structure of the selected node to understand available properties
+  console.log("Selected node structure:", selected);
+  if (selected.id && selected.id.includes('_')) {
+    console.log("ID parts:", selected.id.split('_'));
+  }
+  console.log("Node type from property:", selected.type);
+  console.log("Node color:", selected.color);
+  
   // Mark as in detail view
   sigmaInstance.detail = true;
   
@@ -431,7 +449,13 @@ function nodeActive(nodeId) {
   var neighbors = {};
   sigmaInstance.iterEdges(function(e) {
     if (e.source == nodeId || e.target == nodeId) {
-      neighbors[e.source == nodeId ? e.target : e.source] = true;
+      // Get ID of the neighbor node
+      const neighborId = e.source == nodeId ? e.target : e.source;
+      // Initialize the neighbor object if it doesn't exist
+      neighbors[neighborId] = neighbors[neighborId] || {};
+      // Store edge information if needed
+      neighbors[neighborId].edgeLabel = e.label || "";
+      neighbors[neighborId].edgeColor = e.color;
     }
   });
   
@@ -565,6 +589,113 @@ function nodeActive(nodeId) {
         'visibility': 'visible',
         'opacity': '1'
       });
+  
+  // Collect neighbor node information for the information panel
+  sigmaInstance.iterNodes(function(n) {
+    if (neighbors[n.id]) {
+      neighbors[n.id].label = n.label || n.id;
+      
+      // Determine node type using multiple methods
+      let nodeType = "unknown";
+      
+      // Method 1: Direct type property
+      if (n.type) {
+        nodeType = n.type;
+      } 
+      // Method 2: Parse from ID if it follows the format type_number
+      else if (n.id && n.id.includes('_')) {
+        const idParts = n.id.split('_');
+        if (idParts.length >= 2 && ['paper', 'author', 'organization'].includes(idParts[0])) {
+          nodeType = idParts[0];
+        }
+      }
+      // Method 3: Try to determine from color
+      else if (n.color) {
+        // Match the color to known node types
+        for (const type in config.nodeTypes) {
+          if (config.nodeTypes[type].color === n.color) {
+            nodeType = type;
+            break;
+          }
+        }
+        // Try with default node types if not found in config
+        if (nodeType === "unknown") {
+          for (const type in nodeTypes) {
+            if (nodeTypes[type].color === n.color) {
+              nodeType = type;
+              break;
+            }
+          }
+        }
+      }
+      
+      neighbors[n.id].type = nodeType;
+      neighbors[n.id].color = n.color;
+    }
+  });
+  
+  // Populate connection list
+  var connectionList = [];
+  // Group neighbors by type
+  var neighborsByType = {};
+  
+  for (var id in neighbors) {
+    var neighbor = neighbors[id];
+    if (neighbor) {
+      // Initialize array for this type if it doesn't exist
+      neighborsByType[neighbor.type] = neighborsByType[neighbor.type] || [];
+      // Add this neighbor to its type group
+      neighborsByType[neighbor.type].push({
+        id: id,
+        label: neighbor.label || id,
+        color: neighbor.color
+      });
+    }
+  }
+  
+  // For each type, add a header and then list the connections
+  // Sort types to have known types first, 'unknown' last
+  let sortedTypes = Object.keys(neighborsByType).sort((a, b) => {
+    if (a === 'unknown') return 1;
+    if (b === 'unknown') return -1;
+    return a.localeCompare(b);
+  });
+  
+  sortedTypes.forEach(function(type) {
+    // Get the color for this type from config
+    var typeColor = config.nodeTypes && config.nodeTypes[type] ? 
+                   config.nodeTypes[type].color : 
+                   nodeTypes[type]?.color || '#666';
+    
+    // Debug connection types
+    console.log(`Found ${neighborsByType[type].length} neighbors of type: ${type}`);
+    
+    // Get a readable type name
+    let typeName = type;
+    if (type === 'unknown') {
+      typeName = 'Other Connections';
+    }
+    
+    // Add a header for this type with appropriate styling
+    connectionList.push('<li class="connection-type-header" style="margin-top: 8px; margin-bottom: 5px; font-weight: bold; color: ' + typeColor + ';">' + 
+                       (type === 'unknown' ? typeName : typeName.charAt(0).toUpperCase() + typeName.slice(1) + 's') + 
+                       ' (' + neighborsByType[type].length + '):</li>');
+    
+    // Add each connection of this type
+    neighborsByType[type].forEach(function(neighbor) {
+      // For unknown type connections, try to get a hint from the ID if available
+      let labelHint = '';
+      if (type === 'unknown' && neighbor.id && neighbor.id.includes('_')) {
+        const idParts = neighbor.id.split('_');
+        if (idParts.length >= 2) {
+          labelHint = ` (${idParts[0]})`;
+        }
+      }
+      
+      connectionList.push('<li><a href="#" data-node-id="' + neighbor.id + '" style="color: ' + typeColor + ';">' + 
+                         neighbor.label + labelHint + '</a></li>');
+    });
+  });
     
     // Set the node name/title
     $('.nodeattributes .name').text(selected.label || selected.id);
@@ -614,18 +745,6 @@ function nodeActive(nodeId) {
     $('.nodeattributes .data').html(dataHTML);
     
     // Build connection list
-    var connectionList = [];
-    for (var id in neighbors) {
-      var neighborNode = null;
-      sigmaInstance.iterNodes(function(n) { 
-        if (n.id == id) neighborNode = n;
-      });
-      
-      if (neighborNode) {
-        connectionList.push('<li><a href="#" data-node-id="' + id + '">' + (neighborNode.label || id) + '</a></li>');
-      }
-    }
-    
     $('.nodeattributes .link ul')
       .html(connectionList.length ? connectionList.join('') : '<li>No connections</li>')
       .css('display', 'block');
