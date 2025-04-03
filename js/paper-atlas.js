@@ -23,8 +23,11 @@ $(document).ready(function() {
   // Load configuration
   $.getJSON('config.json', function(data) {
     config = data;
-    document.title = config.title || 'Daily Paper Atlas';
-    $('#title').text(config.title || 'Daily Paper Atlas');
+    document.title = config.title || '🤗 Daily Papers Atlas';
+    $('#title').text(config.title || '🤗 Daily Papers Atlas');
+    
+    // Don't modify the intro text at all - using hardcoded HTML
+    
     loadGraph();
   });
 

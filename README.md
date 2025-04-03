@@ -1,4 +1,4 @@
-# Daily Papers Atlas
+# 🤗 Daily Papers Atlas
 
 The atlas visualization demo of the daily papers listed in [Hugging Face Daily Papers](https://huggingface.co/papers). 
 

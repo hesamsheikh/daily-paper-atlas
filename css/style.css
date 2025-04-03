@@ -265,6 +265,18 @@ canvas#sigma_bg_1 {
 #titletext {
   margin-bottom: 20px;
   line-height: 1.5;
+  display: block;
+  width: 100%;
+}
+
+#titletext a {
+  color: #007AFF;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#titletext a:hover {
+  text-decoration: none;
 }
 
 .info {

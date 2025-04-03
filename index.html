@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-gb" lang="en" xmlns:og="http://opengraphprotocol.org/schema/" xmlns:fb="http://www.facebook.com/2008/fbml" itemscope itemtype="http://schema.org/Map">
 
 <head>
-<title>Daily Paper Atlas</title>
+<title>🤗 Daily Papers Atlas</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1,user-scalable=no" />
@@ -39,8 +39,8 @@
   </div>
   <div id="mainpanel">
     <div class="col">
-      <div id="title">Daily Paper Atlas</div>
-      <div id="titletext">A visualization of research papers and authors network. This interactive map shows relationships between papers and the researchers who created them.</div>
+      <div id="title">🤗 Daily Papers Atlas</div>
+      <div id="titletext">A demo network of the top research papers in Machine Learning featured in <a href='https://huggingface.co/papers' target='_blank'>Hugging Face Daily Papers</a>.<br>Report and Project: <a href='https://github.com/hesamsheikh/daily-papers-analysis' target='_blank'>GitHub</a></div>
     </div>
     
     <div class="col">
@@ -70,7 +70,7 @@
     
     <div class="col footer">
       <div class="credits">
-        Web rendering powered by <a href="https://sigmajs.org/" target="_blank">SigmaJS</a>. Developed by Daily Paper Atlas Team.
+        Graph visualization by <a href="https://gephi.org/" target="_blank">Gephi</a> and rendered for web by <a href="https://sigmajs.org/" target="_blank">SigmaJS</a>..
       </div>
     </div>
   </div>
@@ -95,5 +95,28 @@
     <div class="z" rel="out"></div>
     <div class="z" rel="center"></div>
   </div>
+
+  <!-- Script to protect the intro text from being modified by any scripts -->
+  <script type="text/javascript">
+    // Get the original content that we want to preserve
+    const originalIntroHTML = document.getElementById('titletext').innerHTML;
+    
+    // Create a MutationObserver to detect any changes to the element
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function() {
+        // If the content has changed, restore it
+        if (document.getElementById('titletext').innerHTML !== originalIntroHTML) {
+          document.getElementById('titletext').innerHTML = originalIntroHTML;
+        }
+      });
+    });
+    
+    // Start observing the title text element
+    observer.observe(document.getElementById('titletext'), { 
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  </script>
 </body>
 </html> 

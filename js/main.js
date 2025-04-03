@@ -19,7 +19,7 @@ let nodeTypes = {
 
 // Initialize when document is ready
 $(document).ready(function() {
-  console.log("Document ready, initializing Daily Paper Atlas");
+  console.log("Document ready, initializing 🤗 Daily Papers Atlas");
   
   // Initialize attribute pane
   $('#attributepane').css('display', 'none');
@@ -28,9 +28,10 @@ $(document).ready(function() {
   $.getJSON('config.json', function(data) {
     console.log("Configuration loaded:", data);
     config = data;
-    document.title = config.text.title || 'Daily Paper Atlas';
-    $('#title').text(config.text.title || 'Daily Paper Atlas');
-    $('#titletext').text(config.text.intro || '');
+    document.title = config.text.title || '🤗 Daily Papers Atlas';
+    $('#title').text(config.text.title || '🤗 Daily Papers Atlas');
+    
+    // Don't modify the intro text at all - using hardcoded HTML
     
     // Update the path to load data from the data folder
     if (config.data && !config.data.startsWith('data/')) {
